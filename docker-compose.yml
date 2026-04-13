@@ -6,7 +6,7 @@ services:
     depends_on:
       - auth-server
       - user-service
-      - enroll-service
+      - paper-service
       - monitoring-service
 
   auth-server:
@@ -23,10 +23,10 @@ services:
     ports:
       - "18082:8000"
 
-  enroll-service:
-    build: ./enroll-service
+  paper-service:
+    build: ./paper-service
     environment:
-      - SERVICE_NAME=enroll-service
+      - SERVICE_NAME=paper-service
     ports:
       - "18083:8000"
 

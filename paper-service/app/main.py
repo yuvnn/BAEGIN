@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-app = FastAPI(title="enroll-service", version="0.1.0")
+app = FastAPI(title="paper-service", version="0.1.0")
 
 RULES = []
 
@@ -15,7 +15,7 @@ class EnrollRule(BaseModel):
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "enroll-service"}
+    return {"status": "ok", "service": "paper-service"}
 
 
 @app.post("/rules")

@@ -7,14 +7,14 @@
 - `vue-project`: 사용자 UI (모니터링 결과 조회, 요약/비교 요청)
 - `auth-server`(Spring Boot): 인증 토큰 발급/검증
 - `user-service`: 사용자/조직 프로필 관리
-- `Paper-service`: 논문 평가 및 요약, 등록 관리, 벡터DB 적재, 사내 문서 유사도 평가
+- `paper-service`: 논문 평가 및 요약, 등록 관리, 벡터DB 적재, 사내 문서 유사도 평가
 - `comparepdf-service`: 사내 문서와 논문 비교 보고서 생성, Chroma(VectorDB) 적재
 - `monitoring-service`: 키워드/저널 기준 논문 수집
 
 ## Core Data Flow
 
 1. `monitoring-service`가 키워드/저널 기준으로 신규 논문을 수집합니다.
-2. `Paper-service`가 논문 평가/요약, 등록 관리, 벡터DB 적재, 사내 문서 유사도 평가를 수행합니다.
+2. `paper-service`가 논문 평가/요약, 등록 관리, 벡터DB 적재, 사내 문서 유사도 평가를 수행합니다.
 3. `comparepdf-service`가 사내 문서와 논문을 비교하여 비교 보고서를 생성하고 Chroma에 적재합니다.
 4. 생성 결과를 서비스 API를 통해 조회할 수 있습니다.
 5. 생성 결과를 UI에서 조회하고 `data/reports`에 저장합니다.

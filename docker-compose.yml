@@ -6,7 +6,7 @@ services:
     depends_on:
       - auth-server
       - user-service
-      - enroll-service
+      - paper-service
       - monitoring-service
 
   auth-server:
@@ -23,15 +23,15 @@ services:
     ports:
       - "18082:8000"
 
-  enroll-service:
-    build: ./enroll-service
+  paper-service:
+    build: ./paper-service
     environment:
-      - SERVICE_NAME=enroll-service
+      - SERVICE_NAME=paper-service
     ports:
       - "18083:8000"
 
-  comparepdf-service:
-    build: ./comparepdf-service
+  internal-service:
+    build: ./internal-service
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
@@ -55,7 +55,7 @@ services:
       - CHROMA_PORT=8000
       - CHROMA_COLLECTION_PAPERS=papers
       - CHROMA_COLLECTION_INTERNAL=internal_docs
-      - COMPARE_PDF_SERVICE_URL=http://comparepdf-service:8000
+      - INTERNAL_SERVICE_URL=http://internal-service:8000
     ports:
       - "18085:8000"
     volumes:
@@ -63,7 +63,7 @@ services:
     depends_on:
       chroma:
         condition: service_started
-      comparepdf-service:
+      internal-service:
         condition: service_healthy
 
   chroma:

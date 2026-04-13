@@ -1,21 +1,18 @@
 import os
-import logging
 import time
 from pathlib import Path
 
 import requests
-from fastapi import FastAPI, BackgroundTasks, HTTPException
+from fastapi import FastAPI
+from fastapi import HTTPException
 from pydantic import BaseModel
 
 from .comparator import compare_with_internal_docs
 from .monitor import fetch_mock_papers
-from .evaluator import evaluate_paper
-
-logger = logging.getLogger(__name__)
 
 app = FastAPI(title="monitoring-service", version="0.1.0")
 
-COMPARE_PDF_SERVICE_URL = os.getenv("COMPARE_PDF_SERVICE_URL", "http://localhost:18084")
+INTERNAL_SERVICE_URL = os.getenv("INTERNAL_SERVICE_URL", "http://localhost:18084")
 REPORT_DIR = Path("/app/reports")
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -45,37 +42,8 @@ def post_with_retry(url: str, payload: dict, attempts: int = 5, delay: float = 1
 
     raise HTTPException(
         status_code=503,
-        detail="comparepdf-service is not ready yet. Please retry in a few seconds.",
+        detail="internal-service is not ready yet. Please retry in a few seconds.",
     ) from last_error
-
-
-def process_monitoring_task(keyword: str):
-    logger.info(f"Starting background monitoring task for keyword: {keyword}")
-    papers = fetch_mock_papers(keyword)
-
-    for paper in papers:
-        logger.info(f"Evaluating paper: {paper['title']}")
-        evaluation = evaluate_paper(keyword, paper["title"], paper["abstract"])
-        
-        if evaluation.is_relevant:
-            logger.info(f"Paper '{paper['title']}' passed with score {evaluation.score}. Ingesting...")
-            try:
-                post_with_retry(
-                    f"{COMPARE_PDF_SERVICE_URL}/ingest/paper",
-                    {
-                        "doc_id": paper["paper_id"],
-                        "title": paper["title"],
-                        "text": paper["abstract"],
-                        "metadata": {
-                            "evaluation_score": evaluation.score,
-                            "evaluation_review": evaluation.review
-                        }
-                    }
-                )
-            except Exception as e:
-                logger.error(f"Failed to ingest paper '{paper['title']}': {e}")
-        else:
-            logger.info(f"Paper '{paper['title']}' rejected with score {evaluation.score}. Reason: {evaluation.review}")
 
 
 @app.get("/health")
@@ -84,9 +52,20 @@ def health() -> dict:
 
 
 @app.post("/monitor/run")
-def run_monitoring(payload: MonitoringRequest, background_tasks: BackgroundTasks) -> dict:
-    background_tasks.add_task(process_monitoring_task, payload.keyword)
-    return {"keyword": payload.keyword, "status": "Background task started"}
+def run_monitoring(payload: MonitoringRequest) -> dict:
+    papers = fetch_mock_papers(payload.keyword)
+
+    for paper in papers:
+        post_with_retry(
+            f"{INTERNAL_SERVICE_URL}/ingest/paper",
+            {
+                "doc_id": paper["paper_id"],
+                "title": paper["title"],
+                "text": paper["abstract"],
+            },
+        )
+
+    return {"keyword": payload.keyword, "fetched": len(papers), "papers": papers}
 
 
 @app.post("/compare")

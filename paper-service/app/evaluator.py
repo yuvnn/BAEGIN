@@ -13,27 +13,40 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 class EvaluationResult(BaseModel):
     is_relevant: bool
     score: float
-    review: str
+    decision: str  # Accept, Weak Accept, Borderline, Weak Reject, Reject
+    review: str    # Detailed meta-review or summary of the process
 
-def generate_individual_review(keyword: str, title: str, abstract: str, temperature: float) -> Dict[str, Any]:
-    """Generates an independent review following NeurIPS style guidelines."""
+def generate_review_draft(keyword: str, title: str, text: str, temperature: float) -> Dict[str, Any]:
+    """Generates an initial NeurIPS-style review draft."""
     prompt = f"""
-    You are an expert AI researcher acting as a reviewer for a top-tier machine learning conference.
+    You are an expert AI researcher acting as a reviewer for a top-tier machine learning conference (e.g., NeurIPS).
     Evaluate the following paper based on its relevance to the keyword '{keyword}', methodology, and originality.
     
-    CRUCIAL: Our platform currently ONLY accepts papers related to Artificial Intelligence, Machine Learning, or Deep Learning.
-    If this paper is completely unrelated to AI (e.g., pure finance, biology, mechanics without AI), give it a score of 1 (strong reject).
+    CRUCIAL: The value of the paper must be proven by the authors. Focus on finding flaws and limitations.
+    If the paper is completely unrelated to AI/ML (e.g., pure biology or finance without AI), it must be rejected.
     
     Title: {title}
-    Abstract: {abstract}
+    Text: {text[:15000]}  # Limiting context for prompt efficiency
     
-    Provide a structured review in JSON format matching this schema exactly:
+    Provide your evaluation in strict JSON format according to this rubric:
+    1. Summary: Concise objective summary of contributions.
+    2. Originality: Are the tasks or methods novel?
+    3. Quality: Is the submission technically sound?
+    4. Clarity: Is it well-organized and clearly written?
+    5. Significance: Impact on the ML community.
+    6. Questions to Authors: Specific questions to clarify doubts.
+    7. Score: 1-10 scale (10: Top 5%, 8: Top 50%, 6: Marginally Accept, 4: Marginally Reject, 1: Trivial/Incorrect).
+    
+    JSON Schema:
     {{
-        "summary": string (A concise summary of the paper's claimed contributions),
-        "strengths": [string] (List of strengths),
-        "weaknesses": [string] (List of weaknesses),
-        "score": integer (1 to 10 scale, where 1 is strong reject and 10 is strong accept),
-        "confidence": integer (1 to 5 scale, your confidence in this review)
+        "summary": "string",
+        "originality": "string",
+        "quality": "string",
+        "clarity": "string",
+        "significance": "string",
+        "questions": ["string"],
+        "score": integer,
+        "decision": "Accept" | "Weak Accept" | "Borderline" | "Weak Reject" | "Reject"
     }}
     """
     
@@ -41,43 +54,68 @@ def generate_individual_review(keyword: str, title: str, abstract: str, temperat
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are an expert academic reviewer designed to output JSON."},
+                {"role": "system", "content": "You are a critical academic reviewer. You focus on flaws and technical correctness."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
             temperature=temperature,
         )
-        
-        result_str = response.choices[0].message.content
-        if not result_str:
-            raise ValueError("Empty response from OpenAI")
-            
-        return json.loads(result_str)
+        return json.loads(response.choices[0].message.content)
     except Exception as e:
-        logger.error(f"Error generating individual review: {e}")
-        return {"summary": "Error", "strengths": [], "weaknesses": [], "score": 0, "confidence": 1}
+        logger.error(f"Error generating review draft: {e}")
+        return {"score": 1, "decision": "Reject", "summary": f"Error: {e}"}
 
-def generate_meta_review(keyword: str, title: str, abstract: str, reviews: List[Dict[str, Any]]) -> EvaluationResult:
-    """Acts as an Area Chair to synthesize independent reviews and make a final decision."""
-    reviews_json = json.dumps(reviews, indent=2)
-    
+def reflect_on_review(title: str, text: str, current_review: Dict[str, Any]) -> Dict[str, Any]:
+    """Models the self-reflection loop to improve review accuracy and critical depth."""
+    review_json = json.dumps(current_review, indent=2)
     prompt = f"""
-    You are an Area Chair for a top-tier AI conference. You need to make a final decision on the following paper.
-    Your goal is to decide if it is highly relevant to the topic '{keyword}' and meets the quality bar.
+    You are a Meta-Reviewer reflecting on a generated review for the paper: {title}.
     
-    CRUCIAL: If the individual reviewers noted that this paper is NOT related to AI/ML, you must reject it (score <= 5, accept: false).
+    Initial Review:
+    {review_json}
     
-    Title: {title}
-    Abstract: {abstract}
+    Tasks:
+    1. Critically re-examine the paper's text if provided: {text[:5000]}...
+    2. Does the initial review overestimate the results?
+    3. Is the score justified by the identified weaknesses?
+    4. Adjust the scores and qualitative analysis if they were too optimistic or missed a critical flaw.
     
-    Here are the 5 independent reviews from your committee:
+    Output the updated review in the same JSON format.
+    """
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a skeptical meta-reviewer. Your job is to ensure the review is not too lenient."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.1,
+        )
+        return json.loads(response.choices[0].message.content)
+    except Exception as e:
+        logger.error(f"Error in reflection loop: {e}")
+        return current_review
+
+def generate_meta_review(keyword: str, reviews: List[Dict[str, Any]]) -> EvaluationResult:
+    """Acts as an Area Chair to synthesize 5 independent ensemble reviews."""
+    reviews_json = json.dumps(reviews, indent=2)
+    prompt = f"""
+    You are an Area Chair for a top-tier AI conference. You have 5 independent reviews for a submission.
+    Your task is to synthesize these reviews and make a final consensus decision.
+    
+    Conference Context: Topic '{keyword}'
+    
+    Reviews:
     {reviews_json}
     
-    Synthesize these reviews and provide your final decision in JSON format exactly matching this schema:
+    Synthesize the consensus. If reviewers are split, lean towards the more critical and well-reasoned arguments.
+    Provide a final JSON decision:
     {{
-        "meta_review": string (A comprehensive meta-review summarizing the consensus and your reasoning),
-        "final_score": float (The consensus score, usually a weighted average of reviewer scores, 1.0 to 10.0),
-        "accept": boolean (true if final_score >= 6.0, false otherwise)
+        "meta_review": "string (summarizing consensus and reasoning)",
+        "final_score": float (1.0 to 10.0),
+        "final_decision": "Accept" | "Weak Accept" | "Borderline" | "Weak Reject" | "Reject"
     }}
     """
     
@@ -85,45 +123,53 @@ def generate_meta_review(keyword: str, title: str, abstract: str, reviews: List[
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are an Area Chair designed to output JSON decisions."},
+                {"role": "system", "content": "You are an Area Chair making a final decision based on committee reviews."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
             temperature=0.1,
         )
+        result = json.loads(response.choices[0].message.content)
         
-        result_str = response.choices[0].message.content
-        if not result_str:
-            raise ValueError("Empty response from OpenAI Meta-Reviewer")
-            
-        result_dict = json.loads(result_str)
+        # Acceptance threshold is typically >= 6.0
+        final_score = result.get("final_score", 0.0)
+        accept = final_score >= 6.0
+        
         return EvaluationResult(
-            is_relevant=result_dict.get("accept", False),
-            score=result_dict.get("final_score", 0.0),
-            review=result_dict.get("meta_review", "No review provided")
+            is_relevant=accept,
+            score=final_score,
+            decision=result.get("final_decision", "Reject"),
+            review=result.get("meta_review", "No meta-review generated.")
         )
-        
     except Exception as e:
-        logger.error(f"Error generating meta review: {e}")
-        return EvaluationResult(is_relevant=False, score=0.0, review=f"Meta evaluation failed: {e}")
+        logger.error(f"Error generating meta-review: {e}")
+        return EvaluationResult(is_relevant=False, score=0.0, decision="Reject", review=f"Meta-review failed: {e}")
 
-def evaluate_paper(keyword: str, title: str, abstract: str) -> EvaluationResult:
+def evaluate_paper(keyword: str, title: str, abstract: str, full_text: str = "") -> EvaluationResult:
     """
-    Evaluates a paper using the AI Scientist Automated Reviewer ensemble method.
-    1. Generates 5 independent reviews with varying temperatures.
-    2. Uses a meta-reviewer (Area Chair) to synthesize and make a final decision.
+    Complete AI Scientist evaluation pipeline:
+    1. Ensemble of 5 independent reviews.
+    2. Each review undergoes 5 reflection loops.
+    3. Meta-review (Area Chair) synthesis.
     """
-    # Temperatures for the 5 independent reviewers to ensure diverse perspectives
-    temperatures = [0.1, 0.3, 0.5, 0.7, 0.9]
+    num_ensemble = 5
+    num_reflections = 5
     
-    reviews = []
-    for temp in temperatures:
-        review = generate_individual_review(keyword, title, abstract, temp)
-        # Skip failed reviews if any
-        if review.get("score", 0) > 0:
-            reviews.append(review)
-            
-    if not reviews:
-        return EvaluationResult(is_relevant=False, score=0.0, review="All individual reviews failed.")
+    # Use full text if available, otherwise fallback to abstract
+    content_to_review = full_text if full_text else abstract
+    
+    ensemble_reviews = []
+    
+    for i in range(num_ensemble):
+        logger.info(f"Generating ensemble review {i+1}/{num_ensemble}...")
+        # Use low temperature for consistency as per doc
+        review = generate_review_draft(keyword, title, content_to_review, temperature=0.1)
         
-    return generate_meta_review(keyword, title, abstract, reviews)
+        # Reflection loops
+        for r in range(num_reflections):
+            logger.info(f"  Reflection loop {r+1}/{num_reflections} for review {i+1}...")
+            review = reflect_on_review(title, content_to_review, review)
+            
+        ensemble_reviews.append(review)
+        
+    return generate_meta_review(keyword, ensemble_reviews)

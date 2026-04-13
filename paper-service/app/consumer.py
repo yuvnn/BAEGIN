@@ -48,18 +48,24 @@ def consume_papers():
                 logger.warning(f"Incomplete paper data received: {paper_data}")
                 continue
 
-            logger.info(f"Evaluating paper: {title}")
-            evaluation = evaluate_paper(keyword, title, abstract)
+            logger.info(f"Processing paper: {title}")
+            
+            # Step 1: Download and Parse PDF first to get full text for rigorous evaluation
+            full_text = ""
+            if pdf_url:
+                logger.info(f"Downloading PDF from {pdf_url} for evaluation...")
+                full_text = download_and_parse_pdf(pdf_url)
+            else:
+                logger.warning(f"No pdf_url provided for {doc_id}. Proceeding with abstract only.")
+
+            # Step 2: Evaluate using AI Scientist pipeline (Full text if available)
+            logger.info(f"Evaluating paper with AI Scientist pipeline...")
+            evaluation = evaluate_paper(keyword, title, abstract, full_text=full_text)
             
             if evaluation.is_relevant:
-                logger.info(f"Paper '{title}' passed evaluation (Score: {evaluation.score}). Downloading PDF for full summarization...")
+                logger.info(f"Paper '{title}' PASSED evaluation (Score: {evaluation.score}, Decision: {evaluation.decision}).")
                 
-                full_text = ""
-                if pdf_url:
-                    full_text = download_and_parse_pdf(pdf_url)
-                else:
-                    logger.warning(f"No pdf_url provided for {doc_id}. Falling back to abstract-only summarization.")
-
+                # Step 3: Summarize using the already extracted full text
                 summary_dict = summarize_paper(doc_id, title, abstract, body_text=full_text)
                 md_summary = summary_dict.get("summary", "")
                 

@@ -7,6 +7,7 @@ from typing import List, Dict, Any
 
 from .consumer import start_kafka_consumer
 from .chroma_client import ensure_collection, get_recent_papers
+from .database import engine, Base
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,13 @@ class EnrollRule(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize MariaDB Tables
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("MariaDB tables initialized successfully.")
+    except Exception as e:
+        logger.error(f"Failed to initialize MariaDB tables: {e}")
+
     # Initialize ChromaDB connection on startup
     try:
         ensure_collection()

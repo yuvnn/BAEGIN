@@ -8,9 +8,11 @@ logger = logging.getLogger(__name__)
 CHROMA_HOST = os.getenv("CHROMA_HOST", "chroma")
 CHROMA_PORT = int(os.getenv("CHROMA_PORT", 8000))
 COLLECTION_NAME = os.getenv("CHROMA_COLLECTION_PAPERS", "papers")
+INTERNAL_COLLECTION_NAME = os.getenv("CHROMA_COLLECTION_INTERNAL", "internal_docs")
 
 _client = None
 _collection = None
+_internal_collection = None
 
 def get_chroma_client():
     global _client
@@ -25,6 +27,13 @@ def ensure_collection():
         client = get_chroma_client()
         _collection = client.get_or_create_collection(name=COLLECTION_NAME)
     return _collection
+
+def ensure_internal_collection():
+    global _internal_collection
+    if _internal_collection is None:
+        client = get_chroma_client()
+        _internal_collection = client.get_or_create_collection(name=INTERNAL_COLLECTION_NAME)
+    return _internal_collection
 
 def store_paper(doc_id: str, summary: str, metadata: Dict[str, Any]):
     """
@@ -64,3 +73,18 @@ def get_recent_papers(limit: int = 50) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Failed to fetch papers from ChromaDB: {e}")
         return []
+
+def query_internal_docs(query_text: str, n_results: int = 50) -> Dict[str, Any]:
+    """
+    Queries the internal_docs collection to find similar chunks for the paper summary.
+    """
+    try:
+        collection = ensure_internal_collection()
+        results = collection.query(
+            query_texts=[query_text],
+            n_results=n_results
+        )
+        return results
+    except Exception as e:
+        logger.error(f"Failed to query internal_docs in ChromaDB: {e}")
+        return {}

@@ -27,7 +27,7 @@ def summarize_paper(paper_id: str, title: str, abstract: str, body_text: str = "
     {{
       "paper_id": "{paper_id}",
       "title": "{title}",
-      "summary": "The concise summary text covering problem, methodology, and findings.",
+      "summary": "The concise summary text covering problem, methodology, and findings. YOU MUST USE MARKDOWN FORMATTING HERE (e.g. headers, bullet points, bold text) for readability.",
       "keywords": ["keyword1", "keyword2", ...],
       "citations": [
         {{ "text": "Important quote from the paper" }}
@@ -42,7 +42,7 @@ def summarize_paper(paper_id: str, title: str, abstract: str, body_text: str = "
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a highly skilled research assistant that summarizes academic papers into strict JSON."},
+                {"role": "system", "content": "You are a highly skilled research assistant that summarizes academic papers into strict JSON. You format your summaries beautifully using Markdown."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},

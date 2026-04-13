@@ -30,14 +30,18 @@ services:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
       - CHROMA_COLLECTION_PAPERS=papers
+      - CHROMA_COLLECTION_INTERNAL=internal_docs
       - KAFKA_BROKER=kafka:29092
       - KAFKA_TOPIC_PAPERS=new_papers_topic
+      - DATABASE_URL=mysql+pymysql://baegin_user:baegin_password@mariadb:3306/baegin_db
     ports:
       - "18083:8000"
     depends_on:
       chroma:
         condition: service_started
       kafka:
+        condition: service_healthy
+      mariadb:
         condition: service_healthy
 
   internal-service:
@@ -87,6 +91,23 @@ services:
     volumes:
       - ./data/chroma:/chroma/chroma
 
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: baegin_db
+      MYSQL_USER: baegin_user
+      MYSQL_PASSWORD: baegin_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
@@ -114,3 +135,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+
+volumes:
+  mariadb_data:
+

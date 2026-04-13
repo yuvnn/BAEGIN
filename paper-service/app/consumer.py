@@ -3,10 +3,14 @@ import json
 import logging
 import threading
 from kafka import KafkaConsumer
+from sqlalchemy.orm import Session
+
 from .evaluator import evaluate_paper
 from .summarizer import summarize_paper
-from .chroma_client import store_paper
+from .chroma_client import store_paper, query_internal_docs
 from .pdf_parser import download_and_parse_pdf
+from .database import SessionLocal
+from .models import PaperSummary, PaperRelate
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +33,7 @@ def consume_papers():
         return
 
     for message in consumer:
+        db: Session = SessionLocal()
         try:
             paper_data = message.value
             doc_id = paper_data.get("paper_id")
@@ -36,6 +41,8 @@ def consume_papers():
             title = paper_data.get("title", "")
             abstract = paper_data.get("abstract", "")
             pdf_url = paper_data.get("pdf_url", "")
+            paper_url = paper_data.get("url", "")
+            authors = paper_data.get("authors", [])
             
             if not all([doc_id, title, abstract]):
                 logger.warning(f"Incomplete paper data received: {paper_data}")
@@ -54,7 +61,21 @@ def consume_papers():
                     logger.warning(f"No pdf_url provided for {doc_id}. Falling back to abstract-only summarization.")
 
                 summary_dict = summarize_paper(doc_id, title, abstract, body_text=full_text)
+                md_summary = summary_dict.get("summary", "")
                 
+                # 1. Save to RDB: PaperSummary
+                db_summary = PaperSummary(
+                    paper_id=doc_id,
+                    md_summary=md_summary,
+                    paper_url=paper_url,
+                    authors=json.dumps(authors, ensure_ascii=False),
+                    category=keyword
+                )
+                db.merge(db_summary)
+                db.commit()
+                logger.info(f"Saved PaperSummary for '{doc_id}' to MariaDB.")
+
+                # 2. Store to ChromaDB (papers collection)
                 metadata = {
                     "source_type": "paper",
                     "document_type": "paper",
@@ -64,15 +85,65 @@ def consume_papers():
                     "evaluation_score": evaluation.score,
                     "evaluation_review": evaluation.review
                 }
-                
-                logger.info(f"Storing paper '{title}' into ChromaDB...")
-                # We store the stringified JSON from summary_dict as the document text
                 store_paper(doc_id, json.dumps(summary_dict, ensure_ascii=False), metadata)
+                
+                # 3. Query internal_docs and process PaperRelate
+                logger.info(f"Querying internal_docs for similarities...")
+                internal_results = query_internal_docs(md_summary, n_results=50)
+                
+                internal_docs_found = {} # doc_id -> rank
+                paper_relates = {} # doc_id -> dict of data
+                current_rank = 1
+                
+                if internal_results and "ids" in internal_results and internal_results["ids"]:
+                    # results structure is lists of lists
+                    ids = internal_results["ids"][0]
+                    docs = internal_results["documents"][0]
+                    metas = internal_results["metadatas"][0]
+                    
+                    for i in range(len(ids)):
+                        if current_rank > 10:
+                            break
+                            
+                        meta = metas[i] if metas else {}
+                        chunk_text = docs[i]
+                        internal_doc_id = meta.get("doc_id", "unknown_doc")
+                        source_file = meta.get("source_file", "Unknown File")
+                        
+                        if internal_doc_id not in internal_docs_found:
+                            internal_docs_found[internal_doc_id] = current_rank
+                            paper_relates[internal_doc_id] = {
+                                "internal_doc_id": internal_doc_id,
+                                "rank": current_rank,
+                                "reason": f"### 매칭된 내부 문서: {source_file}\n\n- **유사 청크 1**: {chunk_text}\n"
+                            }
+                            current_rank += 1
+                        else:
+                            # Append chunk to reason
+                            paper_relates[internal_doc_id]["reason"] += f"\n- **추가 유사 청크**: {chunk_text}\n"
+                            
+                # 4. Save to RDB: PaperRelate
+                for doc_ref, relate_data in paper_relates.items():
+                    db_relate = PaperRelate(
+                        paper_id=doc_id,
+                        internal_doc_id=relate_data["internal_doc_id"],
+                        rank=relate_data["rank"],
+                        reason=relate_data["reason"]
+                    )
+                    db.merge(db_relate)
+                
+                if paper_relates:
+                    db.commit()
+                    logger.info(f"Saved {len(paper_relates)} PaperRelate records for '{doc_id}' to MariaDB.")
+                
             else:
                 logger.info(f"Paper '{title}' was rejected (Score: {evaluation.score}). Reason: {evaluation.review}")
                 
         except Exception as e:
             logger.error(f"Error processing message: {e}")
+            db.rollback()
+        finally:
+            db.close()
 
 def start_kafka_consumer():
     """Starts the Kafka consumer in a background thread."""

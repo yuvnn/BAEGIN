@@ -1,0 +1,66 @@
+services:
+  vue-project:
+    build: ./vue-project
+    ports:
+      - "15173:5173"
+    depends_on:
+      - auth-server
+      - user-service
+      - enroll-service
+      - monitoring-service
+
+  auth-server:
+    build: ./auth-server
+    environment:
+      - SERVICE_NAME=auth-server
+    ports:
+      - "18081:8000"
+
+  user-service:
+    build: ./user-service
+    environment:
+      - SERVICE_NAME=user-service
+    ports:
+      - "18082:8000"
+
+  enroll-service:
+    build: ./enroll-service
+    environment:
+      - SERVICE_NAME=enroll-service
+    ports:
+      - "18083:8000"
+
+  pdf-service:
+    build: ./pdf-service
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - CHROMA_COLLECTION_PAPERS=papers
+      - CHROMA_COLLECTION_INTERNAL=internal_docs
+    ports:
+      - "18084:8000"
+    depends_on:
+      - chroma
+
+  monitoring-service:
+    build: ./monitoring-service
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - CHROMA_COLLECTION_PAPERS=papers
+      - CHROMA_COLLECTION_INTERNAL=internal_docs
+      - PDF_SERVICE_URL=http://pdf-service:8000
+    ports:
+      - "18085:8000"
+    volumes:
+      - ./data/reports:/app/reports
+    depends_on:
+      - chroma
+      - pdf-service
+
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "18090:8000"
+    volumes:
+      - ./data/chroma:/chroma/chroma

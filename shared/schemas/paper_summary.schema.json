@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PaperSummary",
+  "type": "object",
+  "required": ["paper_id", "title", "summary", "keywords", "citations"],
+  "properties": {
+    "paper_id": { "type": "string" },
+    "title": { "type": "string" },
+    "summary": { "type": "string" },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ": "string" },
+    "internal_doc_id": { "type": "string" },
+    "similarity_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "gaps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "opportunities": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "citations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "paper_quote": { "type": "string" },
+          "internal_quote": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,31 @@
 
 
+.DS_Store
+
+# Environment files
+.env
+*.env
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Node / frontend build outputs
+node_modules/
+dist/
+
+# Java / Maven build outputs
+target/
+
+# IDE / editor files
+.idea/
+.vscode/
+
+# Logs and temp files
+*.log
+*.tmp
+
+# 개인 파일
 troubleshooting.md
 troubleshooting_template.md
-
-*.env

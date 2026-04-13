@@ -1,9 +1,10 @@
 import os
 import logging
+import time
 from pathlib import Path
 
 import requests
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, HTTPException
 from pydantic import BaseModel
 
 from .comparator import compare_with_internal_docs
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="monitoring-service", version="0.1.0")
 
-PDF_SERVICE_URL = os.getenv("PDF_SERVICE_URL", "http://localhost:18084")
+COMPARE_PDF_SERVICE_URL = os.getenv("COMPARE_PDF_SERVICE_URL", "http://localhost:18084")
 REPORT_DIR = Path("/app/reports")
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -28,6 +29,26 @@ class CompareRequest(BaseModel):
     query_text: str
 
 
+def post_with_retry(url: str, payload: dict, attempts: int = 5, delay: float = 1.0) -> requests.Response:
+    last_error: requests.RequestException | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt == attempts:
+                break
+            time.sleep(delay)
+
+    raise HTTPException(
+        status_code=503,
+        detail="comparepdf-service is not ready yet. Please retry in a few seconds.",
+    ) from last_error
+
+
 def process_monitoring_task(keyword: str):
     logger.info(f"Starting background monitoring task for keyword: {keyword}")
     papers = fetch_mock_papers(keyword)
@@ -39,9 +60,9 @@ def process_monitoring_task(keyword: str):
         if evaluation.is_relevant:
             logger.info(f"Paper '{paper['title']}' passed with score {evaluation.score}. Ingesting...")
             try:
-                requests.post(
-                    f"{PDF_SERVICE_URL}/ingest/paper",
-                    json={
+                post_with_retry(
+                    f"{COMPARE_PDF_SERVICE_URL}/ingest/paper",
+                    {
                         "doc_id": paper["paper_id"],
                         "title": paper["title"],
                         "text": paper["abstract"],
@@ -49,8 +70,7 @@ def process_monitoring_task(keyword: str):
                             "evaluation_score": evaluation.score,
                             "evaluation_review": evaluation.review
                         }
-                    },
-                    timeout=10,
+                    }
                 )
             except Exception as e:
                 logger.error(f"Failed to ingest paper '{paper['title']}': {e}")

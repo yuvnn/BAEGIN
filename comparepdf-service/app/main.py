@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from .chroma_client import ensure_collections, get_chroma_client
 from .ingestion import build_metadata, chunk_text, embed_chunks
 
-app = FastAPI(title="pdf-service", version="0.1.0")
+app = FastAPI(title="comparepdf-service", version="0.1.0")
 
 
 class IngestRequest(BaseModel):
@@ -22,7 +22,7 @@ def startup() -> None:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "pdf-service"}
+    return {"status": "ok", "service": "comparepdf-service"}
 
 
 @app.post("/ingest/internal")

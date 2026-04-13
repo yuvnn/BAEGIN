@@ -56,6 +56,9 @@ services:
       - CHROMA_COLLECTION_PAPERS=papers
       - CHROMA_COLLECTION_INTERNAL=internal_docs
       - INTERNAL_SERVICE_URL=http://internal-service:8000
+      - PAPER_SERVICE_URL=http://paper-service:8000
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - MONITOR_INTERVAL_MINUTES=60
     ports:
       - "18085:8000"
     volumes:
@@ -65,6 +68,38 @@ services:
         condition: service_started
       internal-service:
         condition: service_healthy
+      paper-service:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+
+  kafka:
+      image: confluentinc/cp-kafka:7.7.0
+      container_name: baegin-kafka-1
+      environment:
+        # Confluent 이미지는 KAFKA_CFG_ 가 아니라 KAFKA_ 로 시작합니다.
+        - KAFKA_NODE_ID=1
+        - KAFKA_PROCESS_ROLES=broker,controller
+        - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+        - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+        - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+        - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+        - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+        - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+        - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+        - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+        - KAFKA_LOG_DIRS=/var/lib/kafka/data
+        - CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk  # KRaft 모드 클러스터 ID 필수
+      ports:
+        - "19092:9092"
+      volumes:
+        - ./data/kafka:/var/lib/kafka/data
+      healthcheck:
+        test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+        interval: 15s
+        timeout: 10s
+        retries: 5
+        start_period: 60s
 
   chroma:
     image: chromadb/chroma:latest

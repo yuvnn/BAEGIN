@@ -18,6 +18,8 @@ dist/
 # Java / Maven build outputs
 target/
 
+data/**
+
 # IDE / editor files
 .idea/
 .vscode/

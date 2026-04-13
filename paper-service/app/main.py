@@ -1,10 +1,12 @@
+import json
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from pydantic import BaseModel
+from typing import List, Dict, Any
 
 from .consumer import start_kafka_consumer
-from .chroma_client import ensure_collection
+from .chroma_client import ensure_collection, get_recent_papers
 
 logger = logging.getLogger(__name__)
 
@@ -43,3 +45,24 @@ def create_rule(rule: EnrollRule) -> dict:
 @app.get("/rules")
 def list_rules() -> list[dict]:
     return RULES
+
+@app.get("/papers")
+def list_papers(limit: int = 50) -> List[Dict[str, Any]]:
+    """
+    Returns recently evaluated and summarized papers for the Frontend Dashboard.
+    """
+    papers = get_recent_papers(limit)
+    response = []
+    for paper in papers:
+        # Try parsing the summary string back to JSON if possible
+        try:
+            summary_dict = json.loads(paper.get("document", "{}"))
+        except:
+            summary_dict = {"summary": paper.get("document")}
+            
+        response.append({
+            "paper_id": paper.get("paper_id"),
+            "metadata": paper.get("metadata", {}),
+            "summary_data": summary_dict
+        })
+    return response

@@ -1,7 +1,7 @@
 import os
 import chromadb
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -40,3 +40,27 @@ def store_paper(doc_id: str, summary: str, metadata: Dict[str, Any]):
         logger.info(f"Stored paper {doc_id} into ChromaDB")
     except Exception as e:
         logger.error(f"Failed to store paper {doc_id} in ChromaDB: {e}")
+
+def get_recent_papers(limit: int = 50) -> List[Dict[str, Any]]:
+    """
+    Fetches recently evaluated and summarized papers from ChromaDB.
+    """
+    try:
+        collection = ensure_collection()
+        results = collection.get(
+            limit=limit,
+            include=["documents", "metadatas"]
+        )
+        
+        papers = []
+        if results and "ids" in results and results["ids"]:
+            for i in range(len(results["ids"])):
+                papers.append({
+                    "paper_id": results["ids"][i],
+                    "document": results["documents"][i],
+                    "metadata": results["metadatas"][i]
+                })
+        return papers
+    except Exception as e:
+        logger.error(f"Failed to fetch papers from ChromaDB: {e}")
+        return []

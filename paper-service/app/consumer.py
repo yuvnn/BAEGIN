@@ -6,6 +6,7 @@ from kafka import KafkaConsumer
 from .evaluator import evaluate_paper
 from .summarizer import summarize_paper
 from .chroma_client import store_paper
+from .pdf_parser import download_and_parse_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,7 @@ def consume_papers():
             keyword = paper_data.get("keyword", "AI")
             title = paper_data.get("title", "")
             abstract = paper_data.get("abstract", "")
+            pdf_url = paper_data.get("pdf_url", "")
             
             if not all([doc_id, title, abstract]):
                 logger.warning(f"Incomplete paper data received: {paper_data}")
@@ -43,8 +45,15 @@ def consume_papers():
             evaluation = evaluate_paper(keyword, title, abstract)
             
             if evaluation.is_relevant:
-                logger.info(f"Paper '{title}' passed evaluation (Score: {evaluation.score}). Summarizing...")
-                summary_dict = summarize_paper(doc_id, title, abstract)
+                logger.info(f"Paper '{title}' passed evaluation (Score: {evaluation.score}). Downloading PDF for full summarization...")
+                
+                full_text = ""
+                if pdf_url:
+                    full_text = download_and_parse_pdf(pdf_url)
+                else:
+                    logger.warning(f"No pdf_url provided for {doc_id}. Falling back to abstract-only summarization.")
+
+                summary_dict = summarize_paper(doc_id, title, abstract, body_text=full_text)
                 
                 metadata = {
                     "source_type": "paper",

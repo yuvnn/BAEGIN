@@ -1,8 +1,10 @@
 import os
+import time
 from pathlib import Path
 
 import requests
 from fastapi import FastAPI
+from fastapi import HTTPException
 from pydantic import BaseModel
 
 from .comparator import compare_with_internal_docs
@@ -24,6 +26,26 @@ class CompareRequest(BaseModel):
     query_text: str
 
 
+def post_with_retry(url: str, payload: dict, attempts: int = 5, delay: float = 1.0) -> requests.Response:
+    last_error: requests.RequestException | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            last_error = exc
+            if attempt == attempts:
+                break
+            time.sleep(delay)
+
+    raise HTTPException(
+        status_code=503,
+        detail="comparepdf-service is not ready yet. Please retry in a few seconds.",
+    ) from last_error
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "service": "monitoring-service"}
@@ -34,14 +56,13 @@ def run_monitoring(payload: MonitoringRequest) -> dict:
     papers = fetch_mock_papers(payload.keyword)
 
     for paper in papers:
-        requests.post(
+        post_with_retry(
             f"{COMPARE_PDF_SERVICE_URL}/ingest/paper",
-            json={
+            {
                 "doc_id": paper["paper_id"],
                 "title": paper["title"],
                 "text": paper["abstract"],
             },
-            timeout=10,
         )
 
     return {"keyword": payload.keyword, "fetched": len(papers), "papers": papers}

@@ -25,6 +25,8 @@
 docker compose up --build -d
 ```
 
+프론트엔드는 Nginx가 정적 파일을 서빙하며, `/api/*` 요청은 내부적으로 `monitoring-service`로 프록시됩니다.
+
 ## Ports
 
 - Vue: `15173`

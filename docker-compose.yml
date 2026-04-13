@@ -2,7 +2,7 @@ services:
   vue-project:
     build: ./vue-project
     ports:
-      - "15173:5173"
+      - "15173:80"
     depends_on:
       - auth-server
       - user-service
@@ -41,6 +41,12 @@ services:
       - "18084:8000"
     depends_on:
       - chroma
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   monitoring-service:
     build: ./monitoring-service
@@ -55,8 +61,10 @@ services:
     volumes:
       - ./data/reports:/app/reports
     depends_on:
-      - chroma
-      - comparepdf-service
+      chroma:
+        condition: service_started
+      comparepdf-service:
+        condition: service_healthy
 
   chroma:
     image: chromadb/chroma:latest

@@ -1,0 +1,69 @@
+import os
+import json
+import logging
+import threading
+from kafka import KafkaConsumer
+from .evaluator import evaluate_paper
+from .summarizer import summarize_paper
+from .chroma_client import store_paper
+
+logger = logging.getLogger(__name__)
+
+KAFKA_BROKER = os.getenv("KAFKA_BROKER", "localhost:9092")
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC_PAPERS", "new_papers_topic")
+
+def consume_papers():
+    try:
+        consumer = KafkaConsumer(
+            KAFKA_TOPIC,
+            bootstrap_servers=[KAFKA_BROKER],
+            auto_offset_reset='earliest',
+            enable_auto_commit=True,
+            group_id='paper-service-group',
+            value_deserializer=lambda x: json.loads(x.decode('utf-8'))
+        )
+        logger.info(f"Connected to Kafka broker at {KAFKA_BROKER}, listening to topic '{KAFKA_TOPIC}'")
+    except Exception as e:
+        logger.error(f"Failed to connect to Kafka: {e}")
+        return
+
+    for message in consumer:
+        try:
+            paper_data = message.value
+            doc_id = paper_data.get("paper_id")
+            keyword = paper_data.get("keyword", "AI")
+            title = paper_data.get("title", "")
+            abstract = paper_data.get("abstract", "")
+            
+            if not all([doc_id, title, abstract]):
+                logger.warning(f"Incomplete paper data received: {paper_data}")
+                continue
+
+            logger.info(f"Evaluating paper: {title}")
+            evaluation = evaluate_paper(keyword, title, abstract)
+            
+            if evaluation.is_relevant:
+                logger.info(f"Paper '{title}' passed evaluation (Score: {evaluation.score}). Summarizing...")
+                summary = summarize_paper(title, abstract)
+                
+                metadata = {
+                    "source_type": "paper",
+                    "title": title,
+                    "keyword": keyword,
+                    "evaluation_score": evaluation.score,
+                    "evaluation_review": evaluation.review
+                }
+                
+                logger.info(f"Storing paper '{title}' into ChromaDB...")
+                store_paper(doc_id, summary, metadata)
+            else:
+                logger.info(f"Paper '{title}' was rejected (Score: {evaluation.score}). Reason: {evaluation.review}")
+                
+        except Exception as e:
+            logger.error(f"Error processing message: {e}")
+
+def start_kafka_consumer():
+    """Starts the Kafka consumer in a background thread."""
+    thread = threading.Thread(target=consume_papers, daemon=True)
+    thread.start()
+    logger.info("Kafka consumer thread started.")

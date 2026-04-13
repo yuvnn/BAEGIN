@@ -44,7 +44,7 @@ def consume_papers():
             
             if evaluation.is_relevant:
                 logger.info(f"Paper '{title}' passed evaluation (Score: {evaluation.score}). Summarizing...")
-                summary = summarize_paper(title, abstract)
+                summary_data = summarize_paper(doc_id, title, abstract)
                 
                 metadata = {
                     "source_type": "paper",
@@ -55,7 +55,8 @@ def consume_papers():
                 }
                 
                 logger.info(f"Storing paper '{title}' into ChromaDB...")
-                store_paper(doc_id, summary, metadata)
+                # We store the stringified summary_data JSON as the document
+                store_paper(doc_id, json.dumps(summary_data), metadata)
             else:
                 logger.info(f"Paper '{title}' was rejected (Score: {evaluation.score}). Reason: {evaluation.review}")
                 

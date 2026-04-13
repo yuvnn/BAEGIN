@@ -1,14 +1,16 @@
 import os
+import json
 import logging
 from openai import OpenAI
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def summarize_paper(title: str, abstract: str, body_text: str = "") -> str:
+def summarize_paper(paper_id: str, title: str, abstract: str, body_text: str = "") -> Dict[str, Any]:
     """
-    Generates a concise summary of the paper suitable for vector DB storage and human reading.
+    Generates a concise summary of the paper and formats it according to the PaperSummary schema.
     """
     text_to_summarize = abstract
     if body_text:
@@ -21,27 +23,43 @@ def summarize_paper(title: str, abstract: str, body_text: str = "") -> str:
 
     prompt = f"""
     Please provide a comprehensive yet concise summary of the following paper.
-    The summary should cover:
-    1. The core problem being solved
-    2. The proposed methodology or approach
-    3. The main findings or contributions
+    You must return a JSON object matching this schema exactly:
+    {{
+      "paper_id": "{paper_id}",
+      "title": "{title}",
+      "summary": "The concise summary text covering problem, methodology, and findings.",
+      "keywords": ["keyword1", "keyword2", ...],
+      "citations": [
+        {{ "text": "Important quote from the paper" }}
+      ]
+    }}
     
     Title: {title}
     Text: {text_to_summarize}
-    
-    Summary:
     """
     
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a highly skilled research assistant that summarizes academic papers."},
+                {"role": "system", "content": "You are a highly skilled research assistant that summarizes academic papers into strict JSON."},
                 {"role": "user", "content": prompt}
             ],
+            response_format={"type": "json_object"},
             temperature=0.3,
         )
-        return response.choices[0].message.content.strip()
+        
+        result_str = response.choices[0].message.content.strip()
+        if not result_str:
+            raise ValueError("Empty response from OpenAI")
+            
+        return json.loads(result_str)
     except Exception as e:
         logger.error(f"Error summarizing paper '{title}': {e}")
-        return f"Summary generation failed: {e}"
+        return {
+            "paper_id": paper_id,
+            "title": title,
+            "summary": f"Summary generation failed: {e}",
+            "keywords": [],
+            "citations": []
+        }

@@ -48,6 +48,8 @@ def consume_papers():
                 
                 metadata = {
                     "source_type": "paper",
+                    "document_type": "paper",
+                    "access_level": "public",
                     "title": title,
                     "keyword": keyword,
                     "evaluation_score": evaluation.score,

@@ -12,7 +12,7 @@ from .monitor import fetch_mock_papers
 
 app = FastAPI(title="monitoring-service", version="0.1.0")
 
-COMPARE_PDF_SERVICE_URL = os.getenv("COMPARE_PDF_SERVICE_URL", "http://localhost:18084")
+INTERNAL_SERVICE_URL = os.getenv("INTERNAL_SERVICE_URL", "http://localhost:18084")
 REPORT_DIR = Path("/app/reports")
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -42,7 +42,7 @@ def post_with_retry(url: str, payload: dict, attempts: int = 5, delay: float = 1
 
     raise HTTPException(
         status_code=503,
-        detail="comparepdf-service is not ready yet. Please retry in a few seconds.",
+        detail="internal-service is not ready yet. Please retry in a few seconds.",
     ) from last_error
 
 
@@ -57,7 +57,7 @@ def run_monitoring(payload: MonitoringRequest) -> dict:
 
     for paper in papers:
         post_with_retry(
-            f"{COMPARE_PDF_SERVICE_URL}/ingest/paper",
+            f"{INTERNAL_SERVICE_URL}/ingest/paper",
             {
                 "doc_id": paper["paper_id"],
                 "title": paper["title"],

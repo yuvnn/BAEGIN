@@ -30,8 +30,8 @@ services:
     ports:
       - "18083:8000"
 
-  pdf-service:
-    build: ./pdf-service
+  comparepdf-service:
+    build: ./comparepdf-service
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
@@ -49,14 +49,14 @@ services:
       - CHROMA_PORT=8000
       - CHROMA_COLLECTION_PAPERS=papers
       - CHROMA_COLLECTION_INTERNAL=internal_docs
-      - PDF_SERVICE_URL=http://pdf-service:8000
+      - COMPARE_PDF_SERVICE_URL=http://comparepdf-service:8000
     ports:
       - "18085:8000"
     volumes:
       - ./data/reports:/app/reports
     depends_on:
       - chroma
-      - pdf-service
+      - comparepdf-service
 
   chroma:
     image: chromadb/chroma:latest

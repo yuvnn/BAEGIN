@@ -1,12 +1,8 @@
 # Data Flow
 
-1. User or admin uploads internal docs (PDF, DOCX, planning docs)
-2. pdf-service extracts text and splits it into chunks
-3. Embeddings are generated and stored in Chroma collection internal_docs
-4. monitoring-service polls external paper providers for new papers
-5. Paper abstract/full text is stored in Chroma collection papers
-6. When compare is requested:
-   - search paper vectors
-   - search internal doc vectors
-   - generate comparison report from similarity + evidence snippets
-7. Save result as JSON/TXT and expose to UI
+1. monitoring-service collects papers by keyword and journal rules
+2. Paper-service evaluates and summarizes papers, manages registration, and stores vectors in Chroma
+3. Paper-service runs similarity checks against internal documents
+4. comparepdf-service compares papers with internal documents and generates comparison reports
+5. comparepdf-service stores comparison outputs in Chroma
+6. Save result as JSON/TXT and expose to UI

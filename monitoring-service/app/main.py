@@ -10,7 +10,7 @@ from .monitor import fetch_mock_papers
 
 app = FastAPI(title="monitoring-service", version="0.1.0")
 
-PDF_SERVICE_URL = os.getenv("PDF_SERVICE_URL", "http://localhost:18084")
+COMPARE_PDF_SERVICE_URL = os.getenv("COMPARE_PDF_SERVICE_URL", "http://localhost:18084")
 REPORT_DIR = Path("/app/reports")
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -35,7 +35,7 @@ def run_monitoring(payload: MonitoringRequest) -> dict:
 
     for paper in papers:
         requests.post(
-            f"{PDF_SERVICE_URL}/ingest/paper",
+            f"{COMPARE_PDF_SERVICE_URL}/ingest/paper",
             json={
                 "doc_id": paper["paper_id"],
                 "title": paper["title"],

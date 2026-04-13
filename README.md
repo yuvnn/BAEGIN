@@ -5,18 +5,18 @@
 ## Services
 
 - `vue-project`: 사용자 UI (모니터링 결과 조회, 요약/비교 요청)
-- `auth-server`: 인증 토큰 발급/검증
+- `auth-server`(Spring Boot): 인증 토큰 발급/검증
 - `user-service`: 사용자/조직 프로필 관리
-- `enroll-service`: 모니터링 대상 키워드/저널/사내 문서 등록 관리
-- `pdf-service`: PDF/사내 문서를 파싱하고 Chroma(VectorDB)에 적재
-- `monitoring-service`: 논문 수집, 요약 생성, 사내 문서와 비교 보고서 생성
+- `Paper-service`: 논문 평가 및 요약, 등록 관리, 벡터DB 적재, 사내 문서 유사도 평가
+- `comparepdf-service`: 사내 문서와 논문 비교 보고서 생성, Chroma(VectorDB) 적재
+- `monitoring-service`: 키워드/저널 기준 논문 수집
 
 ## Core Data Flow
 
-1. `enroll-service`에서 감시 키워드/관심 분야/비교 대상 사내 문서를 등록합니다.
-2. `monitoring-service`가 스케줄 기반으로 신규 논문을 수집합니다.
-3. `pdf-service`가 논문 PDF/사내기술 문서를 임베딩하여 Chroma에 저장합니다.
-4. `monitoring-service`가 Chroma에서 유사 문서를 검색해 요약/비교 보고서를 생성합니다.
+1. `monitoring-service`가 키워드/저널 기준으로 신규 논문을 수집합니다.
+2. `Paper-service`가 논문 평가/요약, 등록 관리, 벡터DB 적재, 사내 문서 유사도 평가를 수행합니다.
+3. `comparepdf-service`가 사내 문서와 논문을 비교하여 비교 보고서를 생성하고 Chroma에 적재합니다.
+4. 생성 결과를 서비스 API를 통해 조회할 수 있습니다.
 5. 생성 결과를 UI에서 조회하고 `data/reports`에 저장합니다.
 
 ## Quick Start
@@ -30,10 +30,44 @@ docker compose up --build -d
 - Vue: `15173`
 - Auth: `18081`
 - User: `18082`
-- Enroll: `18083`
+- Paper: `18083`
 - PDF: `18084`
 - Monitoring: `18085`
 - Chroma: `18090`
+
+## Service Check Links
+
+### Frontend
+
+- Vue UI: http://localhost:15173
+
+### Backend API Docs (Swagger)
+
+- Auth Docs: http://localhost:18081/docs
+- User Docs: http://localhost:18082/docs
+- Paper Docs: http://localhost:18083/docs
+- PDF Docs: http://localhost:18084/docs
+- Monitoring Docs: http://localhost:18085/docs
+
+### Health Check
+
+- Auth Health: http://localhost:18081/health
+- User Health: http://localhost:18082/health
+- Paper Health: http://localhost:18083/health
+- PDF Health: http://localhost:18084/health
+- Monitoring Health: http://localhost:18085/health
+
+### Chroma
+
+- Chroma Endpoint: http://localhost:18090
+
+## Runtime Verification Commands
+
+```bash
+docker compose ps
+docker compose logs -f monitoring-service
+curl http://localhost:18085/health
+```
 
 ## Next Implementation Priorities
 

@@ -147,7 +147,7 @@ def consume_papers():
                 db_summary = PaperSummary(
                     paper_id=doc_id,
                     md_summary=md_summary,
-                    paper_url=paper_url,
+                    paper_url=pdf_url,
                     authors=json.dumps(authors, ensure_ascii=False),
                     category=category
                 )

@@ -9,14 +9,19 @@ logger = logging.getLogger(__name__)
 
 _ARXIV_ID_RE = re.compile(r"\d{4}\.\d{4,5}")
 
+_AI_CATEGORIES_QUERY = (
+    "cat:cs.AI OR cat:cs.LG OR cat:cs.CL OR cat:cs.CV "
+    "OR cat:cs.RO OR cat:cs.MA OR cat:cs.CY OR cat:stat.ML"
+)
 
-def fetch_arxiv_papers(
-    keyword: str, last_run_dt: datetime | None = None, max_results: int = 10
+
+def fetch_arxiv_ai_papers(
+    last_run_dt: datetime | None = None, max_results: int = 1000
 ) -> list[dict]:
-    query = keyword
+    query = _AI_CATEGORIES_QUERY
     if last_run_dt:
         date_str = last_run_dt.strftime("%Y%m%d%H%M")
-        query = f"{keyword} AND submittedDate:[{date_str} TO *]"
+        query = f"({_AI_CATEGORIES_QUERY}) AND submittedDate:[{date_str} TO *]"
 
     client = arxiv.Client()
     search = arxiv.Search(
@@ -27,13 +32,13 @@ def fetch_arxiv_papers(
     papers = []
     try:
         for result in client.results(search):
-            entry_id = result.entry_id  # e.g. https://arxiv.org/abs/2404.12345v1
+            entry_id = result.entry_id
             match = _ARXIV_ID_RE.search(entry_id)
             arxiv_id = match.group() if match else entry_id
 
             pdf_url = None
             try:
-                pdf_url = result.pdf_url  # provided by arxiv library
+                pdf_url = result.pdf_url
             except Exception:
                 pass
 
@@ -48,6 +53,7 @@ def fetch_arxiv_papers(
                     "url": result.entry_id,
                     "pdf_url": pdf_url,
                     "categories": result.categories,
+                    "comment": result.comment or "",
                 }
             )
     except Exception as exc:
@@ -55,7 +61,7 @@ def fetch_arxiv_papers(
     return papers
 
 
-def fetch_hf_papers(keyword: str | None = None) -> list[dict]:
+def fetch_hf_papers() -> list[dict]:
     try:
         response = requests.get(
             "https://huggingface.co/api/daily_papers", timeout=10
@@ -71,11 +77,6 @@ def fetch_hf_papers(keyword: str | None = None) -> list[dict]:
         paper = item.get("paper", {})
         title = paper.get("title", "")
         abstract = paper.get("summary", "")
-
-        if keyword:
-            kw = keyword.lower()
-            if kw not in title.lower() and kw not in abstract.lower():
-                continue
 
         raw_id = paper.get("id", "")
         arxiv_id = paper.get("arxivId") or (
@@ -104,20 +105,16 @@ def fetch_hf_papers(keyword: str | None = None) -> list[dict]:
                 "url": url,
                 "pdf_url": pdf_url,
                 "arxiv_id": arxiv_id,
+                "upvotes": item.get("likes", 0),
             }
         )
     return papers
 
 
-def fetch_papers(
-    keyword: str,
-    source: str = "all",
-    last_run_dt: datetime | None = None,
-    max_results: int = 10,
+def fetch_all_ai_papers(
+    last_run_dt: datetime | None = None, max_results: int = 1000
 ) -> list[dict]:
     papers: list[dict] = []
-    if source in ("arxiv", "all"):
-        papers.extend(fetch_arxiv_papers(keyword, last_run_dt, max_results))
-    if source in ("huggingface", "all"):
-        papers.extend(fetch_hf_papers(keyword))
+    papers.extend(fetch_arxiv_ai_papers(last_run_dt, max_results))
+    papers.extend(fetch_hf_papers())
     return papers

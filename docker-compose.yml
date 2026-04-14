@@ -66,6 +66,8 @@ services:
 
   monitoring-service:
     build: ./monitoring-service
+    env_file:
+      - .env
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000

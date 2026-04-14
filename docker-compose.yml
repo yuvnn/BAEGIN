@@ -85,6 +85,8 @@ services:
       - CHROMA_COLLECTION_INTERNAL=internal_docs
     ports:
       - "18084:8000"
+    volumes:
+      - ./data/reports:/app/reports
     depends_on:
       - chroma
     healthcheck:

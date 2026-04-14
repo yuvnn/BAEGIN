@@ -3,10 +3,12 @@ import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from .api.report_routes import router as report_router
 from .chroma_client import ensure_collections, get_chroma_client
 from .ingestion import build_metadata, chunk_text, embed_chunks
 
 app = FastAPI(title="internal-service", version="0.1.0")
+app.include_router(report_router)
 
 
 class IngestRequest(BaseModel):

@@ -1,6 +1,11 @@
 import { reactive } from 'vue'
 import { PAPERS } from './data/papers.js'
 
+const savedToken = localStorage.getItem('baegin_token')
+const savedUser = (() => {
+  try { return JSON.parse(localStorage.getItem('baegin_user') || 'null') } catch { return null }
+})()
+
 export const store = reactive({
   currentPage: 'p1',
   curPaper: PAPERS[0],
@@ -10,6 +15,30 @@ export const store = reactive({
   curCat: '전체',
   curSort: 'latest',
   p1ModalOpen: false,
+
+  // Auth
+  token: savedToken || null,
+  user: savedUser || null,
+
+  get isLoggedIn() {
+    return !!this.token
+  },
+
+  login(token, user) {
+    this.token = token
+    this.user = user
+    localStorage.setItem('baegin_token', token)
+    localStorage.setItem('baegin_user', JSON.stringify(user))
+    this.go('p1')
+  },
+
+  logout() {
+    this.token = null
+    this.user = null
+    localStorage.removeItem('baegin_token')
+    localStorage.removeItem('baegin_user')
+    this.currentPage = 'login'
+  },
 
   go(id) {
     this.currentPage = id

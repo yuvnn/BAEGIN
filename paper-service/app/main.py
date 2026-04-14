@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import sys
 
 # Configure logging to output to stdout
@@ -11,16 +12,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Header
 from pydantic import BaseModel
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from .consumer import start_kafka_consumer
+import py_eureka_client.eureka_client as eureka_client
+
+from .consumer import start_kafka_consumer, _ARXIV_TO_CATEGORY
 from .chroma_client import ensure_collection, get_recent_papers
 from .database import engine, Base, get_db
 from .models import PaperSummary, PaperRelate
+
+EUREKA_SERVER = os.getenv("EUREKA_SERVER", "http://eureka-server:8761/eureka")
+SERVICE_PORT = int(os.getenv("PORT", "8000"))
+
+# Invert mapping: category name → list of arxiv tags
+_CATEGORY_TO_ARXIV: Dict[str, List[str]] = {}
+for tag, cat in _ARXIV_TO_CATEGORY.items():
+    _CATEGORY_TO_ARXIV.setdefault(cat, []).append(tag)
 
 RULES = []
 
@@ -46,12 +57,28 @@ async def lifespan(app: FastAPI):
         logger.info("ChromaDB collection initialized.")
     except Exception as e:
         logger.error(f"Failed to initialize ChromaDB collection: {e}")
-        
+
     # Start background Kafka consumer
     logger.info("Starting background Kafka consumer thread...")
     start_kafka_consumer()
+
+    # Register with Eureka
+    try:
+        await eureka_client.init_async(
+            eureka_server=EUREKA_SERVER,
+            app_name="paper-service",
+            instance_port=SERVICE_PORT,
+        )
+        logger.info("Registered with Eureka.")
+    except Exception as e:
+        logger.warning(f"Eureka registration failed (non-fatal): {e}")
+
     yield
     logger.info("Shutting down paper-service...")
+    try:
+        await eureka_client.stop_async()
+    except Exception:
+        pass
 
 app = FastAPI(title="paper-service", version="0.1.0", lifespan=lifespan)
 
@@ -69,23 +96,46 @@ def list_rules() -> list[dict]:
     return RULES
 
 @app.get("/papers")
-def list_papers(limit: int = 50) -> List[Dict[str, Any]]:
+def list_papers(
+    limit: int = 50,
+    x_user_keywords: Optional[str] = Header(None),
+) -> List[Dict[str, Any]]:
     """
     Returns recently evaluated and summarized papers for the Frontend Dashboard.
+    Filters by user keywords (comma-separated arXiv category tags) if provided.
     """
     papers = get_recent_papers(limit)
+
+    # Build allowed category set from X-User-Keywords header
+    allowed_categories: Optional[set] = None
+    if x_user_keywords and x_user_keywords.strip():
+        tags = [t.strip() for t in x_user_keywords.split(",") if t.strip()]
+        allowed_categories = set()
+        for tag in tags:
+            # tag may be an arXiv code (cs.CL) or a display name (Language & Text)
+            if tag in _ARXIV_TO_CATEGORY:
+                allowed_categories.add(_ARXIV_TO_CATEGORY[tag])
+            else:
+                # treat as display category name directly
+                allowed_categories.add(tag)
+
     response = []
     for paper in papers:
-        # Try parsing the summary string back to JSON if possible
         try:
             summary_dict = json.loads(paper.get("document", "{}"))
-        except:
+        except Exception:
             summary_dict = {"summary": paper.get("document")}
+
+        metadata = paper.get("metadata", {})
+        if allowed_categories is not None:
+            paper_cat = metadata.get("category", "")
+            if paper_cat not in allowed_categories:
+                continue
 
         response.append({
             "paper_id": paper.get("paper_id"),
-            "metadata": paper.get("metadata", {}),
-            "summary_data": summary_dict
+            "metadata": metadata,
+            "summary_data": summary_dict,
         })
     return response
 

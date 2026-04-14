@@ -155,15 +155,55 @@ def generate_meta_review(keyword: str, reviews: List[Dict[str, Any]]) -> Evaluat
         logger.error(f"Error generating meta-review: {e}")
         return EvaluationResult(is_relevant=False, score=0.0, decision="Reject", review=f"Meta-review failed: {e}")
 
+def quick_relevance_check(keyword: str, title: str, abstract: str) -> bool:
+    """
+    gpt-4o-mini로 abstract만 보고 빠르게 관련성을 판단합니다 (Desk Rejection).
+
+    명백히 AI/ML과 무관한 논문만 차단합니다. 판단이 애매하면 True(통과)를 반환하여
+    이후 앙상블 평가에서 정밀하게 판단하도록 넘깁니다.
+    오류 발생 시에도 True를 반환하여 파이프라인을 중단하지 않습니다.
+    """
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a program chair doing desk rejection. "
+                        "Be lenient — only reject papers that are completely unrelated to AI/ML research. "
+                        "When in doubt, reply YES."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Is this paper relevant to AI/ML research and the topic '{keyword}'?\n\n"
+                        f"Title: {title}\n"
+                        f"Abstract: {abstract[:1000]}\n\n"
+                        "Reply only YES or NO."
+                    )
+                }
+            ],
+            max_tokens=5,
+            temperature=0,
+        )
+        answer = response.choices[0].message.content.strip().upper()
+        return "NO" not in answer
+    except Exception as e:
+        logger.warning(f"Pre-filter check failed, defaulting to proceed: {e}")
+        return True
+
+
 def evaluate_paper(keyword: str, title: str, abstract: str, full_text: str = "") -> EvaluationResult:
     """
     Complete AI Scientist evaluation pipeline (Optimized for performance):
     1. Ensemble of 3 independent reviews (Reduced from 5 for speed).
-    2. Each review undergoes 2 reflection loops (Reduced from 5 for speed).
+    2. Each review undergoes 1 reflection loop (gpt-4o model quality preserved).
     3. Meta-review (Area Chair) synthesis.
     """
     num_ensemble = 3
-    num_reflections = 2
+    num_reflections = 1
     
     # Use full text if available, otherwise fallback to abstract
     content_to_review = full_text if full_text else abstract

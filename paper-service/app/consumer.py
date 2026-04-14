@@ -6,7 +6,7 @@ import time
 from kafka import KafkaConsumer
 from sqlalchemy.orm import Session
 
-from .evaluator import evaluate_paper
+from .evaluator import evaluate_paper, quick_relevance_check
 from .summarizer import summarize_paper
 from .chroma_client import store_paper, query_internal_docs
 from .pdf_parser import download_and_parse_pdf
@@ -110,9 +110,21 @@ def consume_papers():
                 logger.warning(f"⚠️ Incomplete paper data received: {paper_data}")
                 continue
 
+            # Step 1: Deduplication — skip already processed papers
+            existing = db.query(PaperSummary).filter_by(paper_id=doc_id).first()
+            if existing:
+                logger.info(f"⏭️ Already processed '{doc_id}', skipping.")
+                continue
+
             logger.info(f"🔍 Processing paper: {title}")
-            
-            # Step 1: Download and Parse PDF first
+
+            # Step 2: Quick relevance pre-filter (Desk Rejection via gpt-4o-mini)
+            logger.info(f"🔎 Running quick relevance check for '{title}'...")
+            if not quick_relevance_check(keyword, title, abstract):
+                logger.info(f"🚫 Pre-filter rejected '{title}' as clearly unrelated to '{keyword}'. Skipping full evaluation.")
+                continue
+
+            # Step 3: Download and Parse PDF
             full_text = ""
             if pdf_url:
                 logger.info(f"📥 Downloading PDF from {pdf_url} for evaluation...")
@@ -120,7 +132,7 @@ def consume_papers():
             else:
                 logger.warning(f"⚠️ No pdf_url provided for {doc_id}. Proceeding with abstract only.")
 
-            # Step 2: Evaluate using AI Scientist pipeline
+            # Step 4: Evaluate using AI Scientist pipeline
             logger.info(f"🧠 Evaluating paper '{title}' with AI Scientist pipeline...")
             evaluation = evaluate_paper(keyword, title, abstract, full_text=full_text)
             

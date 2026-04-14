@@ -5,7 +5,7 @@ openai==1.54.3
 kafka-python==2.0.2
 chromadb==1.0.4
 requests==2.32.3
-PyPDF2==3.0.1
+pymupdf4llm
 SQLAlchemy==2.0.36
 pymysql==1.1.1
 cryptography==43.0.3

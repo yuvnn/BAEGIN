@@ -101,7 +101,6 @@ def consume_papers():
             title = paper_data.get("title", "")
             abstract = paper_data.get("abstract", "")
             pdf_url = paper_data.get("pdf_url", "")
-            paper_url = paper_data.get("url", "")
             authors = paper_data.get("authors", [])
             arxiv_categories = paper_data.get("arxiv_categories", [])
             category = classify_category(arxiv_categories)
@@ -147,7 +146,7 @@ def consume_papers():
                 db_summary = PaperSummary(
                     paper_id=doc_id,
                     md_summary=md_summary,
-                    paper_url=paper_url,
+                    paper_url=pdf_url,
                     authors=json.dumps(authors, ensure_ascii=False),
                     category=category
                 )

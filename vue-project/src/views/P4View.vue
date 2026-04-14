@@ -237,10 +237,8 @@
             </div>
 
             <div class="doc-body-text" v-else>
-              <div v-if="internalPdfUrl" class="doc-embed-wrap">
-                <iframe :src="internalPdfUrl" class="doc-embed-frame" title="Internal PDF" loading="lazy"></iframe>
-              </div>
-              <p v-else>사내문서 PDF 경로를 찾지 못했습니다.</p>
+              <div v-if="internalDocText" class="internal-doc-text">{{ internalDocText }}</div>
+              <p v-else style="color:rgba(180,200,255,0.5);font-size:13px;">사내문서를 불러오는 중...</p>
 
               <template v-if="viewerCitation">
                 <p><strong>source:</strong> {{ readableSourceName(viewerCitation) }}</p>
@@ -280,7 +278,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { getReportStreamUrl, startReportGeneration, getReportById } from "../api/reportService";
+import { getReportStreamUrl, startReportGeneration, getReportById, getInternalDocText } from "../api/reportService";
 import { store } from "../store.js";
 
 const rootEl = ref(null);
@@ -288,6 +286,7 @@ const bgCanvasEl = ref(null);
 const activeTab = ref("사내문서");
 const activeLink = ref("");
 const latestReport = ref(null);
+const internalDocText = ref("");
 const reportLoading = ref(false);
 const reportError = ref("");
 const activeCitation = ref(null);
@@ -903,7 +902,16 @@ onMounted(async () => {
   drawBackground();
   resizeHandler = () => drawBackground();
   window.addEventListener("resize", resizeHandler);
-  if (store.currentReportId) {
+
+  if (store.pendingStreamReportId) {
+    const reportId = store.pendingStreamReportId
+    store.pendingStreamReportId = null
+    resetSectionStatuses()
+    reportLoading.value = true
+    reportError.value = ''
+    latestReport.value = makeEmptyReport(reportId)
+    openSectionStream(reportId)
+  } else if (store.currentReportId) {
     try {
       const data = await getReportById(store.currentReportId);
       latestReport.value = data;
@@ -913,6 +921,12 @@ onMounted(async () => {
   } else {
     loadLatestReport();
   }
+
+  // 사내문서 텍스트를 ChromaDB에서 로드
+  try {
+    const doc = await getInternalDocText(FIXED_INTERNAL_DOC_ID);
+    internalDocText.value = doc.text || "";
+  } catch {}
 });
 
 onBeforeUnmount(() => {
@@ -1094,6 +1108,7 @@ body,
 .citation-mark { background: rgba(37,99,235,.35); color: rgba(230,240,255,.95); padding: 0 2px; }
 .doc-embed-wrap { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,.22); min-height: 520px; }
 .doc-embed-frame { width: 100%; height: 520px; border: 0; background: #0a1023; }
+.internal-doc-text { white-space: pre-wrap; font-size: 12px; line-height: 1.8; color: rgba(186,206,246,.84); background: rgba(0,0,0,.22); border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 18px 22px; overflow-y: auto; max-height: 520px; }
 .md-render h3 { font-family: "Syne", sans-serif; font-size: 12px; color: rgba(204,224,255,.9); margin: 10px 0 6px; }
 .md-render p { margin: 0 0 8px; color: rgba(186,206,246,.84); }
 .md-render ul { margin: 0 0 10px 18px; }

@@ -26,3 +26,21 @@ export async function fetchPaperById(paperId) {
   const response = await paperServiceClient.get(`/api/papers/${encodeURIComponent(paperId)}`);
   return response.data;
 }
+
+// 5. 커스텀 파라미터로 arXiv 직접 검색
+export async function searchPapers({ dateFrom, dateTo, keywords, categories, maxResults = 50 }) {
+  const response = await monitoringClient.post('/api/monitor/search', {
+    date_from: dateFrom || null,
+    date_to: dateTo || null,
+    keywords: keywords || [],
+    categories: categories || [],
+    max_results: maxResults,
+  }, { timeout: 60000 })
+  return response.data  // { count, papers[] }
+}
+
+// 6. 논문 관련 사내문서 조회
+export async function fetchPaperRelates(paperId) {
+  const response = await paperServiceClient.get(`/api/papers/${encodeURIComponent(paperId)}/relates`)
+  return response.data  // { paper_id, relates: [{ internal_doc_id, rank, reason }] }
+}

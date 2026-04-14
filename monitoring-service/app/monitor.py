@@ -1,6 +1,7 @@
 import logging
 import re
 from datetime import datetime, timedelta
+from typing import Optional
 
 import arxiv
 import requests
@@ -18,13 +19,17 @@ _ARXIV_CATEGORY_GROUPS = [
 
 
 def _fetch_arxiv_group(
-    categories: list[str],
-    date_filter: str,
-    max_results: int,
+    categories: list[str] | None = None,
+    date_filter: str = "",
+    max_results: int = 50,
+    query_string: str | None = None,
 ) -> list[dict]:
-    query = " OR ".join(categories)
-    if date_filter:
-        query = f"({query}) AND submittedDate:[{date_filter} TO *]"
+    if query_string:
+        query = query_string
+    else:
+        query = " OR ".join(categories or [])
+        if date_filter:
+            query = f"({query}) AND submittedDate:[{date_filter} TO *]"
 
     client = arxiv.Client()
     search = arxiv.Search(
@@ -144,3 +149,31 @@ def fetch_all_ai_papers(
     papers.extend(fetch_arxiv_ai_papers(last_run_dt, max_results))
     papers.extend(fetch_hf_papers())
     return papers
+
+
+def search_papers_custom(
+    categories: list[str],
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    keywords: list[str] = [],
+    max_results: int = 50,
+) -> list[dict]:
+    """커스텀 파라미터로 arXiv 직접 검색."""
+    cat_q = " OR ".join(f"cat:{c}" for c in categories) if categories \
+            else "cat:cs.AI OR cat:cs.LG"
+
+    if date_from and date_to:
+        date_q = f"submittedDate:[{date_from.replace('-','')}0000 TO {date_to.replace('-','')}2359]"
+    elif date_from:
+        date_q = f"submittedDate:[{date_from.replace('-','')}0000 TO *]"
+    else:
+        w = (datetime.utcnow() - timedelta(days=30)).strftime("%Y%m%d0000")
+        date_q = f"submittedDate:[{w} TO *]"
+
+    kw_q = " OR ".join(f"all:{k}" for k in keywords) if keywords else ""
+    parts = [f"({cat_q})", date_q]
+    if kw_q:
+        parts.append(f"({kw_q})")
+    query = " AND ".join(parts)
+
+    return _fetch_arxiv_group(query_string=query, max_results=max_results)

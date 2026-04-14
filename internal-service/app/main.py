@@ -10,6 +10,7 @@ from .api.report_routes import router as report_router
 from .chroma_client import ensure_collections, get_chroma_client
 from .database import engine, Base
 from .ingestion import build_metadata, chunk_text, embed_chunks
+from .repositories.internal_doc_repository import get_internal_doc as _get_internal_doc_from_chroma
 
 app = FastAPI(title="internal-service", version="0.1.0")
 app.include_router(report_router)
@@ -138,6 +139,16 @@ def get_internal_doc_by_id(doc_id: str):
         )
 
     raise HTTPException(status_code=404, detail=f"Internal PDF not found for doc_id: {doc_id}")
+
+
+@app.get("/internal-docs/{doc_id}")
+def get_internal_doc_text(doc_id: str) -> dict:
+    try:
+        doc = _get_internal_doc_from_chroma(doc_id)
+        full_text = "\n\n".join(chunk.document for chunk in doc.internal_chunks)
+        return {"doc_id": doc_id, "title": doc.internal_doc_title, "text": full_text}
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @app.post("/ingest/internal")

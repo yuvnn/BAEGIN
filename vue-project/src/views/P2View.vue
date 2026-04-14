@@ -113,6 +113,8 @@ function transformPaper(p) {
     views: Math.floor(Math.random() * 100), // 실데이터 없을 시 랜덤값 (추후 API 반영 가능)
     tags: (p.metadata?.arxiv_categories || '').split(',').map(s => s.trim()).filter(Boolean),
     cat: p.metadata?.category || 'ML Foundation',
+    paper_url: p.metadata?.url || '',
+    pdf_url: p.metadata?.pdf_url || '',
   }
 }
 

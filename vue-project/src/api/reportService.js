@@ -42,3 +42,8 @@ export async function getReportById(reportId) {
   const response = await internalClient.get(`/reports/${encodeURIComponent(reportId)}`);
   return response.data;
 }
+
+export async function getInternalDocText(docId) {
+  const response = await internalClient.get(`/internal-docs/${encodeURIComponent(docId)}`);
+  return response.data;
+}

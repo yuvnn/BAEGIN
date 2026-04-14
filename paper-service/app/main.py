@@ -179,23 +179,25 @@ def get_paper(paper_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
     """
     Returns full detail of a single paper from MariaDB.
     """
-    paper = db.query(PaperSummary).filter(PaperSummary.paper_id == paper_id).first()
-    if not paper:
+    summary = db.query(PaperSummary).filter(PaperSummary.paper_id == paper_id).first()
+    if not summary:
         raise HTTPException(status_code=404, detail=f"Paper '{paper_id}' not found")
+    paper = db.query(Paper).filter(Paper.paper_id == paper_id).first()
 
     try:
-        authors = json.loads(paper.authors) if paper.authors else []
+        authors = json.loads(summary.authors) if summary.authors else []
     except Exception:
         authors = []
 
     return {
-        "paper_id": paper.paper_id,
-        "category": paper.category,
-        "paper_url": paper.paper_url,
+        "paper_id": summary.paper_id,
+        "category": summary.category,
+        "paper_url": summary.paper_url,
         "authors": authors,
-        "md_summary": paper.md_summary,
-        "aira_score": paper.aira_score,
-        "aira_decision": paper.aira_decision,
+        "abstract": paper.abstract if paper else None,
+        "md_summary": summary.md_summary,
+        "aira_score": summary.aira_score,
+        "aira_decision": summary.aira_decision,
     }
 
 

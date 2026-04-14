@@ -69,10 +69,11 @@
         </div>
       </div>
 
-      <div class="p1-right">
+      <div class="p1-right" style="position:relative;">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div class="p1-sec-title">최신 논문</div>
           <div style="display:flex;align-items:center;gap:7px;position:relative;z-index:2;">
+            <button class="research-btn" @click="openResearch">논문 조사</button>
             <button class="scan-btn" :class="{ loading: scanning }" :disabled="scanning" @click="triggerScan">
               {{ scanning ? '탐색 중...' : '즉시 탐색' }}
             </button>
@@ -89,6 +90,74 @@
           <template v-else-if="scanResult.newCount">신규 {{ scanResult.newCount }}편 확인됨 ✓</template>
           <template v-else>탐색 완료. 새 논문이 없습니다.</template>
         </div>
+
+        <!-- 논문 조사 오버레이 패널 -->
+        <div v-if="researchOpen" class="research-panel">
+          <div class="research-header">
+            <span class="research-title">논문 조사</span>
+            <button class="research-close" @click="closeResearch">✕</button>
+          </div>
+
+          <!-- 날짜 범위 -->
+          <div class="research-row">
+            <label>날짜</label>
+            <input type="date" v-model="researchDateFrom" class="rdate-in" />
+            <span style="color:rgba(180,200,255,.4)">~</span>
+            <input type="date" v-model="researchDateTo" class="rdate-in" />
+          </div>
+
+          <!-- 카테고리 칩 -->
+          <div class="research-row" style="align-items:flex-start;flex-direction:column;gap:5px;">
+            <label>카테고리</label>
+            <div class="rcat-chips">
+              <button v-for="cat in RESEARCH_CATS" :key="cat.code"
+                class="rcat-chip" :class="{ on: researchCats.includes(cat.code) }"
+                @click="toggleCat(cat.code)">{{ cat.label }}</button>
+            </div>
+          </div>
+
+          <!-- 키워드 -->
+          <div class="research-row">
+            <label>키워드</label>
+            <input type="text" v-model="researchKeywords" class="rkw-in"
+              placeholder="transformer, RAG (쉼표 구분)" />
+          </div>
+
+          <button class="research-go-btn" :disabled="researching" @click="runResearch">
+            {{ researching ? '조사 중...' : '조사 시작' }}
+          </button>
+
+          <!-- 로딩 애니메이션 -->
+          <div v-if="researching" class="research-loading">
+            <div class="research-spinner"></div>
+            <span>arXiv에서 논문을 검색하는 중</span>
+            <span class="scan-dots"><span>.</span><span>.</span><span>.</span></span>
+          </div>
+
+          <!-- 결과 -->
+          <template v-if="researchResults">
+            <div v-if="researchResults.error" style="font-size:11px;color:#f87171;padding:6px 0;">
+              검색 실패. 서비스 상태를 확인하세요.
+            </div>
+            <template v-else>
+              <div class="research-result-count">{{ researchResults.count }}편 발견</div>
+              <div class="research-results">
+                <div v-for="p in researchResults.papers" :key="p.paper_id" class="research-paper-item">
+                  <div class="rp-title">{{ p.title }}</div>
+                  <div class="rp-meta">
+                    <span>{{ (p.arxiv_categories || []).slice(0,2).join(' · ') }}</span>
+                    <span>{{ (p.published_at || '').slice(0,10) }}</span>
+                  </div>
+                  <div class="rp-abs">{{ (p.abstract || '').slice(0, 120) }}...</div>
+                </div>
+              </div>
+              <div v-if="researchResults.pipeline_queued > 0" class="research-pipeline-badge">
+                {{ researchResults.pipeline_queued }}편 분석 파이프라인 전달됨 · 논문 목록에 순차 반영
+              </div>
+            </template>
+          </template>
+        </div>
+
         <div class="plist">
           <div v-if="realPapersLoading" class="plist-empty">불러오는 중...</div>
           <div v-else-if="realPapers.length === 0" class="plist-empty">저장된 논문이 없습니다.</div>
@@ -124,12 +193,81 @@ import { store } from '../store.js'
 import { PP, CL } from '../data/vizData.js'
 import { PAPERS } from '../data/papers.js'
 import { fmtMd } from '../utils/format.js'
-import { fetchPapers, fetchPaperById } from '../api/paperService.js'
+import { fetchPapers, fetchPaperById, searchPapers } from '../api/paperService.js'
 
 const bgCanvasRef = ref(null)
 const vizCanvasRef = ref(null)
 const leftPanelRef = ref(null)
 const isDragging = ref(false)
+
+// 논문 조사 패널
+const RESEARCH_CATS = [
+  { code: 'cs.CL', label: 'NLP' }, { code: 'cs.CV', label: 'Vision' },
+  { code: 'cs.LG', label: 'ML' },  { code: 'cs.AI', label: 'AI' },
+  { code: 'cs.RO', label: 'Robotics' }, { code: 'cs.MA', label: 'Multi-Agent' },
+  { code: 'stat.ML', label: 'Stat.ML' },
+]
+const researchOpen = ref(false)
+const researching = ref(false)
+const researchDateFrom = ref('')
+const researchDateTo = ref('')
+const researchCats = ref([])
+const researchKeywords = ref('')
+const researchResults = ref(null)
+
+function openResearch() { researchOpen.value = true; researchResults.value = null }
+function closeResearch() { researchOpen.value = false }
+function toggleCat(code) {
+  const i = researchCats.value.indexOf(code)
+  if (i >= 0) researchCats.value.splice(i, 1)
+  else researchCats.value.push(code)
+}
+async function runResearch() {
+  if (researching.value) return
+  researching.value = true
+  researchResults.value = null
+  try {
+    const kws = researchKeywords.value.split(',').map(k => k.trim()).filter(Boolean)
+    const data = await searchPapers({
+      dateFrom: researchDateFrom.value || null,
+      dateTo: researchDateTo.value || null,
+      keywords: kws,
+      categories: researchCats.value,
+    })
+    researchResults.value = data
+
+    // 파이프라인 전달됨 → 논문 목록 폴링 시작
+    if (data.pipeline_queued > 0) {
+      startResearchPoll(realPapers.value.length)
+    }
+  } catch {
+    researchResults.value = { count: 0, papers: [], error: true }
+  } finally {
+    researching.value = false
+  }
+}
+
+let researchPollTimer = null
+function startResearchPoll(baseCount) {
+  if (researchPollTimer) clearInterval(researchPollTimer)
+  let attempts = 0
+  researchPollTimer = setInterval(async () => {
+    attempts++
+    const papers = await fetchPapers(15).catch(() => null)
+    if (papers) {
+      realPapers.value = papers
+      if (papers.length > baseCount) {
+        clearInterval(researchPollTimer)
+        researchPollTimer = null
+        return
+      }
+    }
+    if (attempts >= 10) {
+      clearInterval(researchPollTimer)
+      researchPollTimer = null
+    }
+  }, 8000)
+}
 
 const realPapers = ref([])
 const realPapersLoading = ref(false)
@@ -481,6 +619,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  if (researchPollTimer) clearInterval(researchPollTimer)
   stopScan()
   if (animId) cancelAnimationFrame(animId)
   window.removeEventListener('resize', resizeV)
@@ -519,4 +658,43 @@ onUnmounted(() => {
 .scan-dots span { animation: dot-blink 1.4s infinite; }
 .scan-dots span:nth-child(2) { animation-delay: .2s; }
 .scan-dots span:nth-child(3) { animation-delay: .4s; }
+
+.research-btn {
+  padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 600;
+  background: rgba(0,212,170,.15); color: #00d4aa;
+  border: 1px solid rgba(0,212,170,.3); cursor: pointer; transition: all .15s;
+}
+.research-btn:hover { background: rgba(0,212,170,.28); }
+.research-panel {
+  position: absolute; inset: 0; background: rgba(3,6,14,.97);
+  backdrop-filter: blur(24px); z-index: 20;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px 14px 10px; overflow-y: auto;
+}
+.research-header { display: flex; align-items: center; justify-content: space-between; }
+.research-title { font-size: 13px; font-weight: 600; color: rgba(210,220,255,.9); }
+.research-close { background: none; border: none; color: rgba(180,200,255,.5); font-size: 16px; cursor: pointer; }
+.research-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: rgba(160,180,230,.6); }
+.rdate-in { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: 4px 8px; font-size: 11px; color: rgba(210,220,255,.9); font-family: inherit; }
+.rcat-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.rcat-chip { padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); color: rgba(180,200,255,.7); cursor: pointer; transition: all .15s; }
+.rcat-chip.on { background: rgba(37,99,235,.35); border-color: rgba(37,99,235,.6); color: #93c5fd; }
+.rkw-in { flex: 1; min-width: 140px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: 5px 9px; font-size: 11px; color: rgba(210,220,255,.9); font-family: inherit; outline: none; }
+.research-go-btn { padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; background: rgba(37,99,235,.5); color: #dde5ff; border: none; cursor: pointer; transition: all .15s; }
+.research-go-btn:hover:not(:disabled) { background: rgba(37,99,235,.75); }
+.research-go-btn:disabled { opacity: .5; cursor: not-allowed; }
+.research-loading { display: flex; align-items: center; gap: 7px; font-size: 11px; color: rgba(147,197,253,.8); padding: 8px 0; }
+.research-spinner { width: 14px; height: 14px; border: 2px solid rgba(37,99,235,.3); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.research-result-count { font-size: 11px; color: rgba(0,212,170,.8); font-weight: 600; padding: 4px 0; }
+.research-results { display: flex; flex-direction: column; gap: 7px; }
+.research-paper-item { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); border-radius: 8px; padding: 10px 12px; }
+.rp-title { font-size: 12px; font-weight: 600; color: rgba(210,220,255,.9); margin-bottom: 4px; line-height: 1.4; }
+.rp-meta { display: flex; gap: 8px; font-size: 10px; color: rgba(140,160,210,.6); margin-bottom: 5px; }
+.rp-abs { font-size: 11px; color: rgba(160,180,230,.6); line-height: 1.6; }
+.research-pipeline-badge {
+  font-size: 10px; color: rgba(0,212,170,.75); font-weight: 600;
+  background: rgba(0,212,170,.08); border: 1px solid rgba(0,212,170,.2);
+  border-radius: 6px; padding: 5px 10px; margin-top: 2px;
+}
 </style>

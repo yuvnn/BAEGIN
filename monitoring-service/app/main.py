@@ -24,7 +24,7 @@ from .comparator import compare_with_internal_docs
 from .impact_agent import IMPACT_THRESHOLD, score_papers
 from .kafka_producer import kafka_publisher
 from .metadata_filter import filter_by_metadata
-from .monitor import fetch_all_ai_papers
+from .monitor import fetch_all_ai_papers, search_papers_custom
 from .semantic_filter import enrich_with_semantic_scholar
 from .seen_papers import is_new, load_state, mark_seen, save_state, to_canonical_id
 
@@ -237,15 +237,14 @@ def run_monitoring(payload: MonitoringRequest) -> dict:
         global _scan_running
         try:
             state = load_state()
-            last_run_dt: datetime | None = state.get("last_run")
-
-            papers = fetch_all_ai_papers(last_run_dt, max_results=payload.max_results)
+            # ① last_run_dt 무시 → 7일 윈도우 전체 수집
+            papers = fetch_all_ai_papers(None, max_results=payload.max_results)
             logger.info("[manual scan] collected: %d", len(papers))
-            new_papers = [p for p in papers if is_new(to_canonical_id(p), state)]
 
-            filtered = filter_by_metadata(new_papers)
-            enriched = enrich_with_semantic_scholar(filtered)
-            scored = score_papers(enriched)
+            # ② dedup 스킵 (seen_papers 무시 — 이미 본 논문도 재처리)
+            # ③ Semantic Scholar 필터 스킵 (속도 우선)
+            filtered = filter_by_metadata(papers)
+            scored = score_papers(filtered)
             high_impact = [p for p in scored if p.get("impact_score", 0) >= IMPACT_THRESHOLD]
             quota_papers = apply_diversity_quota(scored, high_impact, CATEGORY_GROUPS)
 
@@ -254,9 +253,6 @@ def run_monitoring(payload: MonitoringRequest) -> dict:
                 _ingest_paper(paper)
                 kafka_publisher.publish(paper)
                 mark_seen(cid, state)
-
-            for paper in new_papers:
-                mark_seen(to_canonical_id(paper), state)
 
             state["last_run"] = datetime.utcnow()
             save_state(state)
@@ -279,3 +275,41 @@ def compare(payload: CompareRequest) -> dict:
         "comparison": result,
         "report_hint": "Use this result as evidence input for LLM report generation.",
     }
+
+
+class PaperSearchRequest(BaseModel):
+    date_from: str | None = None
+    date_to: str | None = None
+    keywords: list[str] = []
+    categories: list[str] = []
+    max_results: int = 50
+
+
+@app.post("/monitor/search")
+def search_papers(payload: PaperSearchRequest) -> dict:
+    """커스텀 파라미터로 arXiv 직접 검색 (동기 즉시 반환, 백그라운드 파이프라인)."""
+    papers = search_papers_custom(
+        categories=payload.categories,
+        date_from=payload.date_from,
+        date_to=payload.date_to,
+        keywords=payload.keywords,
+        max_results=payload.max_results,
+    )
+    filtered = filter_by_metadata(papers) if papers else []
+
+    # 백그라운드: ingest + kafka publish (score_papers 스킵 — paper-service가 AIRA 담당)
+    def _pipeline():
+        for paper in filtered:
+            try:
+                _ingest_paper(paper)
+            except Exception as exc:
+                logger.warning("[search pipeline] ingest error for %s: %s", paper.get("paper_id"), exc)
+            try:
+                kafka_publisher.publish(paper)
+            except Exception as exc:
+                logger.warning("[search pipeline] kafka error for %s: %s", paper.get("paper_id"), exc)
+
+    if filtered:
+        threading.Thread(target=_pipeline, daemon=True).start()
+
+    return {"count": len(filtered), "papers": filtered, "pipeline_queued": len(filtered)}

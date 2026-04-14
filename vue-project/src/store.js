@@ -12,6 +12,7 @@ export const store = reactive({
   p4Paper: PAPERS[0],
   generatedReports: [],
   currentReportId: null,
+  pendingStreamReportId: null,
   searchQuery: '',
   curCat: '전체',
   curSort: 'latest',

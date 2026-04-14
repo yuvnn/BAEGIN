@@ -5,6 +5,15 @@
       <div class="p1-left" ref="leftPanelRef">
         <canvas ref="vizCanvasRef" id="vizCanvas" :class="{ drag: isDragging }"></canvas>
         <div class="viz-info">드래그로 회전 · 스크롤로 확대/축소 · 클릭으로 논문 선택</div>
+        <!-- Automated Reviewer Panel -->
+        <div class="reviewer-panel">
+          <div class="rp-title">Automated Reviewer</div>
+          <div class="rp-desc">3인 심사 앙상블<br>+ 반성 루프 + Area Chair</div>
+          <div class="rp-score-row">
+            <span class="rp-badge accept">≥ 6.0 Accept</span>
+            <span class="rp-badge range">AIRA 1~10</span>
+          </div>
+        </div>
         <div class="p1-legend">
           <div v-for="cl in CL" :key="cl.name" class="p1-legend-item">
             <div class="p1-legend-dot" :style="{ background: cl.color }"></div>
@@ -32,17 +41,17 @@
             <div class="modal-abstract">{{ modal.abs }}</div>
             <div class="modal-row">
               <div class="modal-stat">
-                <div class="modal-stat-label">신뢰도</div>
-                <div class="modal-stat-value" :style="{ color: modal.scoreColor }">{{ modal.score }}</div>
-                <div class="mbar"><div class="mbar-fill" :style="{ width: modal.score + '%', background: '#ff8c42', opacity: 0.75 }"></div></div>
+                <div class="modal-stat-label">AIRA Score</div>
+                <div class="modal-stat-value" :style="{ color: modal.scoreColor }">{{ modal.airaLabel }}</div>
+                <div class="mbar"><div class="mbar-fill" :style="modal.mbarStyle"></div></div>
               </div>
               <div class="modal-stat">
-                <div class="modal-stat-label">인용 수</div>
-                <div class="modal-stat-value" style="color:#c8d4ff">{{ modal.cite }}</div>
+                <div class="modal-stat-label">판정</div>
+                <div class="modal-stat-value" style="color:#c8d4ff;font-size:11px">{{ modal.decision }}</div>
               </div>
               <div class="modal-stat">
-                <div class="modal-stat-label">출판연도</div>
-                <div class="modal-stat-value" style="color:#c8d4ff">{{ modal.year }}</div>
+                <div class="modal-stat-label">카테고리</div>
+                <div class="modal-stat-value" style="color:#c8d4ff;font-size:11px">{{ modal.category }}</div>
               </div>
             </div>
             <div class="modal-summ-section">
@@ -50,7 +59,7 @@
               <div class="modal-summ-body" v-html="modal.summ"></div>
             </div>
             <div class="modal-actions">
-              <button class="mbtn" @click="modal.onOpenPaper && modal.onOpenPaper()">논문 보러가기 →</button>
+              <button class="mbtn" :disabled="!modal.onOpenPaper" @click="modal.onOpenPaper && modal.onOpenPaper()">논문 보러가기 →</button>
             </div>
           </div>
         </div>
@@ -62,25 +71,25 @@
           <div class="p1-badge">실시간</div>
         </div>
         <div class="plist">
+          <div v-if="realPapersLoading" class="plist-empty">불러오는 중...</div>
+          <div v-else-if="realPapers.length === 0" class="plist-empty">저장된 논문이 없습니다.</div>
           <div
-            v-for="(p, i) in PP"
-            :key="i"
+            v-for="(p, i) in realPapers"
+            :key="p.paper_id"
             class="paper"
-            :class="{ active: activePaperIdx === i }"
-            @click="openModal(i)"
+            :class="{ active: activeRealIdx === i }"
+            @click="openRealModal(p, i)"
           >
             <div class="ptop">
-              <div class="ptitle">
-                <span class="cdot" :style="{ background: CL[p.cl].color }"></span>{{ p.title }}
-              </div>
-              <div class="pscore" :class="scc(p.score)">{{ p.score }}</div>
+              <div class="ptitle">{{ p.metadata?.title || p.paper_id }}</div>
+              <div class="pscore" :class="airaScc(p.aira_score)">AIRA {{ p.aira_score != null ? p.aira_score.toFixed(1) : '-' }}</div>
             </div>
             <div class="pmeta">
-              <span class="ptag">{{ CL[p.cl].name }} · {{ p.venue }}</span>
-              <span class="pyear">{{ p.year }}</span>
+              <span class="ptag">{{ p.metadata?.category || '-' }}</span>
+              <span class="pyear">{{ (p.metadata?.arxiv_categories || '').split(',')[0] }}</span>
             </div>
             <div class="tbar">
-              <div class="tbar-fill" :style="{ width: p.score + '%', background: 'rgba(37,99,235,0.55)' }"></div>
+              <div class="tbar-fill" :style="airaTbarStyle(p.aira_score)"></div>
             </div>
           </div>
         </div>
@@ -95,25 +104,46 @@ import { store } from '../store.js'
 import { PP, CL } from '../data/vizData.js'
 import { PAPERS } from '../data/papers.js'
 import { fmtMd } from '../utils/format.js'
+import { fetchPapers, fetchPaperById } from '../api/paperService.js'
 
 const bgCanvasRef = ref(null)
 const vizCanvasRef = ref(null)
 const leftPanelRef = ref(null)
 const isDragging = ref(false)
 
+const realPapers = ref([])
+const realPapersLoading = ref(false)
+const activeRealIdx = ref(null)
+
 const tooltip = reactive({ show: false, title: '', meta: '', left: 0, top: 0 })
 
 const modal = reactive({
   tagText: '', tagBg: '', tagBorder: '', tagColor: '',
   title: '', auth: '', abs: '',
-  score: 0, scoreColor: '', cite: 0, year: 0,
-  summ: '', onOpenPaper: null
+  airaLabel: '-', scoreColor: '', decision: '-', category: '-',
+  mbarStyle: {},
+  summ: '', pdfUrl: '', onOpenPaper: null
 })
 
 const activePaperIdx = ref(null)
 
 function sc(s) { return s >= 85 ? '#ff8c42' : s >= 70 ? '#ffb470' : 'rgba(140,160,200,0.7)' }
 function scc(s) { return s >= 85 ? 'sh' : s >= 70 ? 'sm' : 'sl' }
+
+// AIRA Score helpers
+function airaScc(score) {
+  if (score == null) return 'sl'
+  return score >= 7 ? 'sh' : score >= 6 ? 'sm' : 'sl'
+}
+function airaTbarStyle(score) {
+  const pct = score != null ? (score / 10 * 100) : 0
+  const color = score != null && score >= 6 ? '#4f8ef5' : 'rgba(140,160,200,0.4)'
+  return { width: pct + '%', background: color }
+}
+function airaScoreColor(score) {
+  if (score == null) return 'rgba(140,160,200,0.7)'
+  return score >= 7 ? '#ff8c42' : score >= 6 ? '#ffb470' : 'rgba(140,160,200,0.7)'
+}
 
 function openModal(idx) {
   activePaperIdx.value = idx
@@ -125,21 +155,61 @@ function openModal(idx) {
   modal.title = p.title
   modal.auth = p.auth
   modal.abs = p.abs
-  modal.score = p.score
+  modal.airaLabel = p.score + '/100'
   modal.scoreColor = sc(p.score)
-  modal.cite = p.cite
-  modal.year = p.year
+  modal.decision = '-'
+  modal.category = cl.name
+  modal.mbarStyle = { width: p.score + '%', background: '#ff8c42', opacity: 0.75 }
   const mappedPaper = PAPERS[idx % PAPERS.length]
   modal.summ = fmtMd(mappedPaper.summ)
+  modal.pdfUrl = ''
   modal.onOpenPaper = () => { closeModal(); store.openPaper(mappedPaper.id) }
   store.p1ModalOpen = true
   selIdx = idx
   redraw()
 }
 
+async function openRealModal(paper, idx) {
+  activeRealIdx.value = idx
+  modal.tagText = paper.metadata?.category || '-'
+  modal.tagBg = 'rgba(79,142,245,0.15)'
+  modal.tagBorder = '0.5px solid rgba(79,142,245,0.4)'
+  modal.tagColor = '#4f8ef5'
+  modal.title = paper.metadata?.title || paper.paper_id
+  modal.auth = ''
+  modal.abs = ''
+  modal.airaLabel = paper.aira_score != null ? paper.aira_score.toFixed(1) : '-'
+  modal.scoreColor = airaScoreColor(paper.aira_score)
+  modal.decision = paper.metadata?.evaluation_decision || '-'
+  modal.category = paper.metadata?.category || '-'
+  modal.mbarStyle = airaTbarStyle(paper.aira_score)
+  modal.summ = '<div style="color:var(--t3);font-size:12px">불러오는 중...</div>'
+  modal.pdfUrl = ''
+  modal.onOpenPaper = null
+  store.p1ModalOpen = true
+
+  try {
+    const detail = await fetchPaperById(paper.paper_id)
+    let authors = []
+    try { authors = JSON.parse(detail.authors || '[]') } catch {}
+    modal.auth = authors.slice(0, 3).join(', ')
+    modal.airaLabel = detail.aira_score != null ? detail.aira_score.toFixed(1) : '-'
+    modal.scoreColor = airaScoreColor(detail.aira_score)
+    modal.decision = detail.aira_decision || '-'
+    modal.category = detail.category || paper.metadata?.category || '-'
+    modal.mbarStyle = airaTbarStyle(detail.aira_score)
+    modal.summ = fmtMd(detail.md_summary || '요약 없음')
+    modal.pdfUrl = detail.paper_url || ''
+    modal.onOpenPaper = detail.paper_url ? () => { window.open(detail.paper_url, '_blank') } : null
+  } catch (e) {
+    modal.summ = '<div style="color:var(--t3)">상세 정보를 불러올 수 없습니다.</div>'
+  }
+}
+
 function closeModal() {
   store.p1ModalOpen = false
   activePaperIdx.value = null
+  activeRealIdx.value = null
   selIdx = null
   redraw()
 }
@@ -319,6 +389,16 @@ onMounted(() => {
 
   resizeV()
   window.addEventListener('resize', resizeV)
+
+  // Fetch real papers from paper-service
+  realPapersLoading.value = true
+  fetchPapers(15).then(data => {
+    realPapers.value = data
+  }).catch(() => {
+    realPapers.value = []
+  }).finally(() => {
+    realPapersLoading.value = false
+  })
 })
 
 onUnmounted(() => {

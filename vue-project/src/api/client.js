@@ -31,3 +31,8 @@ monitoringClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+export const paperServiceClient = axios.create({
+  baseURL: import.meta.env.VITE_PAPER_API || "http://localhost:18083",
+  timeout: 10000,
+});

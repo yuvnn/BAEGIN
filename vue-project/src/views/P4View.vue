@@ -280,7 +280,8 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { getReportStreamUrl, startReportGeneration } from "../api/reportService";
+import { getReportStreamUrl, startReportGeneration, getReportById } from "../api/reportService";
+import { store } from "../store.js";
 
 const rootEl = ref(null);
 const bgCanvasEl = ref(null);
@@ -898,11 +899,20 @@ function drawBackground() {
   ctx.fillRect(0, 0, width, height);
 }
 
-onMounted(() => {
+onMounted(async () => {
   drawBackground();
   resizeHandler = () => drawBackground();
   window.addEventListener("resize", resizeHandler);
-  loadLatestReport();
+  if (store.currentReportId) {
+    try {
+      const data = await getReportById(store.currentReportId);
+      latestReport.value = data;
+      completeAllSectionStatuses();
+    } catch {}
+    store.currentReportId = null;
+  } else {
+    loadLatestReport();
+  }
 });
 
 onBeforeUnmount(() => {

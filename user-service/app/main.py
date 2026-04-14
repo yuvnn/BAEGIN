@@ -1,18 +1,31 @@
 import os
 from contextlib import asynccontextmanager
+from typing import List, Optional
+
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from sqlalchemy import Column, String, Text, create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 import py_eureka_client.eureka_client as eureka_client
 
-USERS_BY_EMAIL = {}
-USERS_BY_ID = {}
+# ── DB ──────────────────────────────────────────────────────────────────────
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./users.db")
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-EUREKA_SERVER = os.getenv("EUREKA_SERVER", "http://eureka-server:8761/eureka")
-SERVICE_PORT = int(os.getenv("PORT", "8000"))
+
+class UserRow(Base):
+    __tablename__ = "users"
+    user_id  = Column(String(255), primary_key=True)
+    email    = Column(String(255), unique=True, nullable=False, index=True)
+    name     = Column(String(255), nullable=False)
+    keywords = Column(Text, nullable=True)   # JSON array string
+    team     = Column(String(255), nullable=True)
 
 
+# ── Pydantic ─────────────────────────────────────────────────────────────────
 class UserProfile(BaseModel):
     user_id: str
     name: str
@@ -27,8 +40,31 @@ class RegisterRequest(BaseModel):
     keywords: List[str] = []
 
 
+# ── Helpers ──────────────────────────────────────────────────────────────────
+import json
+
+def _row_to_dict(row: UserRow) -> dict:
+    kws = []
+    try:
+        kws = json.loads(row.keywords or "[]")
+    except Exception:
+        pass
+    return {
+        "user_id": row.user_id,
+        "email": row.email,
+        "name": row.name,
+        "keywords": kws,
+        "team": row.team,
+    }
+
+
+EUREKA_SERVER = os.getenv("EUREKA_SERVER", "http://eureka-server:8761/eureka")
+SERVICE_PORT  = int(os.getenv("PORT", "8000"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
     try:
         await eureka_client.init_async(
             eureka_server=EUREKA_SERVER,
@@ -54,40 +90,76 @@ def health() -> dict:
 
 @app.post("/users/register")
 def register_user(req: RegisterRequest) -> dict:
-    existing = USERS_BY_EMAIL.get(req.email)
-    if existing:
-        existing["name"] = req.name
-        existing["keywords"] = req.keywords
-        return existing
-    profile = {
-        "user_id": req.email,
-        "email": req.email,
-        "name": req.name,
-        "keywords": req.keywords,
-    }
-    USERS_BY_EMAIL[req.email] = profile
-    USERS_BY_ID[req.email] = profile
-    return profile
+    db = SessionLocal()
+    try:
+        row = db.query(UserRow).filter_by(email=req.email).first()
+        if row:
+            row.name = req.name
+            row.keywords = json.dumps(req.keywords, ensure_ascii=False)
+            db.commit()
+            db.refresh(row)
+        else:
+            row = UserRow(
+                user_id=req.email,
+                email=req.email,
+                name=req.name,
+                keywords=json.dumps(req.keywords, ensure_ascii=False),
+            )
+            db.add(row)
+            db.commit()
+            db.refresh(row)
+        return _row_to_dict(row)
+    finally:
+        db.close()
 
 
 @app.get("/users/me")
 def get_me(x_user_email: Optional[str] = Header(None)) -> dict:
     if not x_user_email:
         raise HTTPException(status_code=401, detail="Missing X-User-Email header")
-    user = USERS_BY_EMAIL.get(x_user_email)
-    if not user:
-        return {"email": x_user_email, "name": x_user_email.split("@")[0], "keywords": []}
-    return user
+    db = SessionLocal()
+    try:
+        row = db.query(UserRow).filter_by(email=x_user_email).first()
+        if not row:
+            return {"email": x_user_email, "name": x_user_email.split("@")[0], "keywords": []}
+        return _row_to_dict(row)
+    finally:
+        db.close()
 
 
 @app.post("/users")
 def upsert_user(profile: UserProfile) -> dict:
-    data = profile.model_dump()
-    USERS_BY_ID[profile.user_id] = data
-    USERS_BY_EMAIL[profile.email] = data
-    return data
+    db = SessionLocal()
+    try:
+        row = db.query(UserRow).filter_by(user_id=profile.user_id).first()
+        if row:
+            row.email    = profile.email
+            row.name     = profile.name
+            row.keywords = json.dumps(profile.keywords, ensure_ascii=False)
+            row.team     = profile.team
+        else:
+            row = UserRow(
+                user_id=profile.user_id,
+                email=profile.email,
+                name=profile.name,
+                keywords=json.dumps(profile.keywords, ensure_ascii=False),
+                team=profile.team,
+            )
+            db.add(row)
+        db.commit()
+        db.refresh(row)
+        return _row_to_dict(row)
+    finally:
+        db.close()
 
 
 @app.get("/users/{user_id}")
 def get_user(user_id: str) -> dict:
-    return USERS_BY_ID.get(user_id, {"error": "not_found"})
+    db = SessionLocal()
+    try:
+        row = db.query(UserRow).filter_by(user_id=user_id).first()
+        if not row:
+            return {"error": "not_found"}
+        return _row_to_dict(row)
+    finally:
+        db.close()

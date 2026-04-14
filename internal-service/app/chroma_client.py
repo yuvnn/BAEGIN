@@ -26,3 +26,4 @@ def ensure_collections() -> None:
     client = get_chroma_client()
     client.get_or_create_collection(os.getenv("CHROMA_COLLECTION_PAPERS", "papers"))
     client.get_or_create_collection(os.getenv("CHROMA_COLLECTION_INTERNAL", "internal_docs"))
+    client.get_or_create_collection(os.getenv("CHROMA_COLLECTION_REPORTS", "reports"))

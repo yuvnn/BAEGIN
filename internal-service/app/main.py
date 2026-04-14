@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from .api.report_routes import router as report_router
 from .chroma_client import ensure_collections, get_chroma_client
+from .database import engine, Base
 from .ingestion import build_metadata, chunk_text, embed_chunks
 
 app = FastAPI(title="internal-service", version="0.1.0")
@@ -80,6 +81,7 @@ def _seed_internal_doc_if_missing() -> None:
 
 @app.on_event("startup")
 def startup() -> None:
+    Base.metadata.create_all(bind=engine)
     ensure_collections()
     _seed_internal_doc_if_missing()
 
@@ -95,7 +97,11 @@ def get_internal_doc_file(file_name: str):
     file_path = INTERNAL_DOCS_DIR / safe_name
     if not file_path.exists() or not file_path.is_file():
         raise HTTPException(status_code=404, detail=f"Internal PDF not found: {safe_name}")
-    return FileResponse(path=str(file_path), media_type="application/pdf", filename=safe_name)
+    return FileResponse(
+        path=str(file_path),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{safe_name}"'},
+    )
 
 
 @app.get("/assets/internal-docs/by-doc/{doc_id}")
@@ -105,20 +111,31 @@ def get_internal_doc_by_id(doc_id: str):
         safe_name = Path(mapped).name
         file_path = INTERNAL_DOCS_DIR / safe_name
         if file_path.exists() and file_path.is_file():
-            return FileResponse(path=str(file_path), media_type="application/pdf", filename=safe_name)
+            return FileResponse(
+                path=str(file_path),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'inline; filename="{safe_name}"'},
+            )
 
     pdf_files = sorted(INTERNAL_DOCS_DIR.glob("*.pdf"))
     if not pdf_files:
-        # Keep filename deterministic even when only one file is expected.
         fallback_name = INTERNAL_DOC_FILE_MAP.get("internal-b482da9a0b960bde")
         if fallback_name:
             fallback_path = INTERNAL_DOCS_DIR / Path(fallback_name).name
             if fallback_path.exists() and fallback_path.is_file():
-                return FileResponse(path=str(fallback_path), media_type="application/pdf", filename=fallback_path.name)
+                return FileResponse(
+                    path=str(fallback_path),
+                    media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{fallback_path.name}"'},
+                )
 
     if len(pdf_files) == 1:
         picked = pdf_files[0]
-        return FileResponse(path=str(picked), media_type="application/pdf", filename=picked.name)
+        return FileResponse(
+            path=str(picked),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'inline; filename="{picked.name}"'},
+        )
 
     raise HTTPException(status_code=404, detail=f"Internal PDF not found for doc_id: {doc_id}")
 

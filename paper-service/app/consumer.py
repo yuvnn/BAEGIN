@@ -11,7 +11,7 @@ from .summarizer import summarize_paper
 from .chroma_client import store_paper, query_internal_docs
 from .pdf_parser import download_and_parse_pdf
 from .database import SessionLocal
-from .models import PaperSummary, PaperRelate
+from .models import Paper, PaperSummary, PaperRelate
 
 logger = logging.getLogger(__name__)
 
@@ -101,10 +101,25 @@ def consume_papers():
             title = paper_data.get("title", "")
             abstract = paper_data.get("abstract", "")
             pdf_url = paper_data.get("pdf_url", "")
+            url = paper_data.get("url", "")
             authors = paper_data.get("authors", [])
+            source = paper_data.get("source", "arxiv")
             arxiv_categories = paper_data.get("arxiv_categories", [])
             category = classify_category(arxiv_categories)
-            
+
+            # Parse datetimes
+            from datetime import datetime as dt
+            def _parse_dt(val):
+                if not val:
+                    return None
+                try:
+                    return dt.fromisoformat(val.replace("Z", "+00:00")).replace(tzinfo=None)
+                except Exception:
+                    return None
+
+            published_at = _parse_dt(paper_data.get("published_at"))
+            detected_at = _parse_dt(paper_data.get("detected_at")) or dt.utcnow()
+
             if not all([doc_id, title, abstract]):
                 logger.warning(f"⚠️ Incomplete paper data received: {paper_data}")
                 continue
@@ -114,6 +129,24 @@ def consume_papers():
             if existing:
                 logger.info(f"⏭️ Already processed '{doc_id}', skipping.")
                 continue
+
+            # Save Paper (raw info) — upsert
+            db_paper = Paper(
+                paper_id=doc_id,
+                title=title,
+                abstract=abstract,
+                authors=json.dumps(authors, ensure_ascii=False),
+                published_at=published_at,
+                detected_at=detected_at,
+                source=source,
+                url=url,
+                pdf_url=pdf_url,
+                arxiv_categories=",".join(arxiv_categories),
+                category=category,
+            )
+            db.merge(db_paper)
+            db.commit()
+            logger.info(f"💾 Saved Paper metadata for '{doc_id}' to MariaDB.")
 
             logger.info(f"🔍 Processing paper: {title}")
 

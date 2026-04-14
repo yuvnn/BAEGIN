@@ -11,6 +11,7 @@ from ..schemas.report import FinalResponse
 from ..services.pipeline_service import PipelineService
 from ..services.report_storage_service import ReportStorageService
 from ..services.report_stream_service import ReportStreamService
+from ..repositories.report_repository import list_reports
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -21,6 +22,11 @@ stream_service = ReportStreamService(pipeline_service=pipeline_service)
 
 class GenerateAcceptedResponse(BaseModel):
     report_id: str
+
+
+@router.get("/")
+def list_all_reports(limit: int = 50) -> list[dict]:
+    return list_reports(limit=limit)
 
 
 @router.post("/generate", response_model=GenerateAcceptedResponse)

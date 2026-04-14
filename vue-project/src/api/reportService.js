@@ -32,3 +32,13 @@ export async function startReportGeneration(payload) {
 export function getReportStreamUrl(reportId) {
   return `${BASE_URL}/reports/stream/${encodeURIComponent(reportId)}`;
 }
+
+export async function getReportList(limit = 50) {
+  const response = await internalClient.get('/reports/', { params: { limit } });
+  return response.data;
+}
+
+export async function getReportById(reportId) {
+  const response = await internalClient.get(`/reports/${encodeURIComponent(reportId)}`);
+  return response.data;
+}

@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 import time
 
 import py_eureka_client.eureka_client as eureka_client
@@ -223,46 +224,51 @@ def health() -> dict:
     return {"status": "ok", "service": "monitoring-service"}
 
 
+_scan_running = False
+
+
 @app.post("/monitor/run")
 def run_monitoring(payload: MonitoringRequest) -> dict:
-    state = load_state()
-    last_run_dt: datetime | None = state.get("last_run")
+    global _scan_running
+    if _scan_running:
+        return {"status": "already_running", "message": "탐색이 이미 진행 중입니다"}
 
-    papers = fetch_all_ai_papers(last_run_dt, max_results=payload.max_results)
-    new_papers = [p for p in papers if is_new(to_canonical_id(p), state)]
+    def _do_scan():
+        global _scan_running
+        try:
+            state = load_state()
+            last_run_dt: datetime | None = state.get("last_run")
 
-    filtered = filter_by_metadata(new_papers)
-    enriched = enrich_with_semantic_scholar(filtered)
-    scored = score_papers(enriched)
-    high_impact = [p for p in scored if p.get("impact_score", 0) >= IMPACT_THRESHOLD]
-    quota_papers = apply_diversity_quota(scored, high_impact, CATEGORY_GROUPS)
+            papers = fetch_all_ai_papers(last_run_dt, max_results=payload.max_results)
+            logger.info("[manual scan] collected: %d", len(papers))
+            new_papers = [p for p in papers if is_new(to_canonical_id(p), state)]
 
-    published = 0
-    ingested = 0
-    for paper in quota_papers:
-        cid = to_canonical_id(paper)
-        _ingest_paper(paper)
-        ingested += 1
-        if kafka_publisher.publish(paper):
-            published += 1
-        mark_seen(cid, state)
+            filtered = filter_by_metadata(new_papers)
+            enriched = enrich_with_semantic_scholar(filtered)
+            scored = score_papers(enriched)
+            high_impact = [p for p in scored if p.get("impact_score", 0) >= IMPACT_THRESHOLD]
+            quota_papers = apply_diversity_quota(scored, high_impact, CATEGORY_GROUPS)
 
-    for paper in new_papers:
-        mark_seen(to_canonical_id(paper), state)
+            for paper in quota_papers:
+                cid = to_canonical_id(paper)
+                _ingest_paper(paper)
+                kafka_publisher.publish(paper)
+                mark_seen(cid, state)
 
-    state["last_run"] = datetime.utcnow()
-    save_state(state)
+            for paper in new_papers:
+                mark_seen(to_canonical_id(paper), state)
 
-    return {
-        "collected": len(papers),
-        "after_dedup": len(new_papers),
-        "after_metadata_filter": len(filtered),
-        "after_semantic_filter": len(enriched),
-        "high_impact": len(high_impact),
-        "published": len(quota_papers),
-        "kafka_published": published,
-        "papers": quota_papers,
-    }
+            state["last_run"] = datetime.utcnow()
+            save_state(state)
+            logger.info("[manual scan] done. quota=%d", len(quota_papers))
+        except Exception as exc:
+            logger.error("[manual scan] error: %s", exc)
+        finally:
+            _scan_running = False
+
+    _scan_running = True
+    threading.Thread(target=_do_scan, daemon=True).start()
+    return {"status": "started", "message": "탐색이 시작되었습니다", "max_results": payload.max_results}
 
 
 @app.post("/compare")

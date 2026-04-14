@@ -23,7 +23,7 @@ import py_eureka_client.eureka_client as eureka_client
 from .consumer import start_kafka_consumer, _ARXIV_TO_CATEGORY
 from .chroma_client import ensure_collection, get_recent_papers
 from .database import engine, Base, get_db
-from .models import PaperSummary, PaperRelate
+from .models import Paper, PaperSummary, PaperRelate
 
 EUREKA_SERVER = os.getenv("EUREKA_SERVER", "http://eureka-server:8761/eureka")
 SERVICE_PORT = int(os.getenv("PORT", "8000"))
@@ -51,17 +51,11 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Failed to initialize MariaDB tables: {e}")
 
-    # Online migration: add AIRA Score columns if not present (idempotent)
+    # Online migration (idempotent)
     try:
         with engine.connect() as conn:
-            conn.execute(text(
-                "ALTER TABLE paper_summary "
-                "ADD COLUMN IF NOT EXISTS aira_score FLOAT DEFAULT NULL"
-            ))
-            conn.execute(text(
-                "ALTER TABLE paper_summary "
-                "ADD COLUMN IF NOT EXISTS aira_decision VARCHAR(50) DEFAULT NULL"
-            ))
+            conn.execute(text("ALTER TABLE paper_summary ADD COLUMN IF NOT EXISTS aira_score FLOAT DEFAULT NULL"))
+            conn.execute(text("ALTER TABLE paper_summary ADD COLUMN IF NOT EXISTS aira_decision VARCHAR(50) DEFAULT NULL"))
             conn.commit()
         logger.info("AIRA Score columns ensured in paper_summary.")
     except Exception as e:
@@ -115,45 +109,52 @@ def list_rules() -> list[dict]:
 def list_papers(
     limit: int = 50,
     x_user_keywords: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """
-    Returns recently evaluated and summarized papers for the Frontend Dashboard.
+    Returns recently evaluated and summarized papers ordered by published_at DESC.
     Filters by user keywords (comma-separated arXiv category tags) if provided.
     """
-    papers = get_recent_papers(limit)
-
     # Build allowed category set from X-User-Keywords header
     allowed_categories: Optional[set] = None
     if x_user_keywords and x_user_keywords.strip():
         tags = [t.strip() for t in x_user_keywords.split(",") if t.strip()]
         allowed_categories = set()
         for tag in tags:
-            # tag may be an arXiv code (cs.CL) or a display name (Language & Text)
             if tag in _ARXIV_TO_CATEGORY:
                 allowed_categories.add(_ARXIV_TO_CATEGORY[tag])
             else:
-                # treat as display category name directly
                 allowed_categories.add(tag)
 
+    query = (
+        db.query(Paper, PaperSummary)
+        .join(PaperSummary, Paper.paper_id == PaperSummary.paper_id)
+        .order_by(Paper.published_at.is_(None), Paper.published_at.desc())
+    )
+    if allowed_categories:
+        query = query.filter(Paper.category.in_(allowed_categories))
+
+    rows = query.limit(limit).all()
+
     response = []
-    for paper in papers:
-        try:
-            summary_dict = json.loads(paper.get("document", "{}"))
-        except Exception:
-            summary_dict = {"summary": paper.get("document")}
-
-        metadata = paper.get("metadata", {})
-        if allowed_categories is not None:
-            paper_cat = metadata.get("category", "")
-            if paper_cat not in allowed_categories:
-                continue
-
+    for paper, summary in rows:
         response.append({
-            "paper_id": paper.get("paper_id"),
-            "metadata": metadata,
-            "summary_data": summary_dict,
-            "aira_score": metadata.get("evaluation_score"),    # stored in ChromaDB
-            "aira_decision": metadata.get("evaluation_decision"),
+            "paper_id": paper.paper_id,
+            "metadata": {
+                "title": paper.title or "",
+                "category": paper.category or "",
+                "arxiv_categories": paper.arxiv_categories or "",
+                "authors": paper.authors or "[]",
+                "published_at": paper.published_at.isoformat() if paper.published_at else None,
+                "url": paper.url or "",
+                "pdf_url": paper.pdf_url or "",
+                "source": paper.source or "",
+                "evaluation_score": summary.aira_score,
+                "evaluation_decision": summary.aira_decision,
+            },
+            "summary_data": {"summary": summary.md_summary or ""},
+            "aira_score": summary.aira_score,
+            "aira_decision": summary.aira_decision,
         })
     return response
 

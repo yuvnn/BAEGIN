@@ -79,11 +79,15 @@
             <div class="p1-badge">실시간</div>
           </div>
         </div>
+        <div v-if="scanning" class="scan-live-banner">
+          <span class="scan-live-dot"></span>
+          논문을 탐색하는 중입니다
+          <span class="scan-dots"><span>.</span><span>.</span><span>.</span></span>
+        </div>
         <div v-if="scanResult" class="scan-toast" :class="{ error: scanResult.error }">
           <template v-if="scanResult.error">탐색 실패. 서비스 상태를 확인하세요.</template>
-          <template v-else>
-            수집 {{ scanResult.collected }}편 → 신규 {{ scanResult.after_dedup }}편 → Kafka {{ scanResult.kafka_published }}편 발행
-          </template>
+          <template v-else-if="scanResult.newCount">신규 {{ scanResult.newCount }}편 확인됨 ✓</template>
+          <template v-else>탐색 완료. 새 논문이 없습니다.</template>
         </div>
         <div class="plist">
           <div v-if="realPapersLoading" class="plist-empty">불러오는 중...</div>
@@ -115,7 +119,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import axios from 'axios'
+import { monitoringClient } from '../api/client.js'
 import { store } from '../store.js'
 import { PP, CL } from '../data/vizData.js'
 import { PAPERS } from '../data/papers.js'
@@ -133,22 +137,48 @@ const activeRealIdx = ref(null)
 const scanning = ref(false)
 const scanResult = ref(null)
 let pollTimer = null
+let scanPollTimer = null
+let scanStopTimer = null
+let scanStartCount = 0
 
 async function triggerScan() {
+  if (scanning.value) return
   scanning.value = true
   scanResult.value = null
+  scanStartCount = realPapers.value.length
+
   try {
-    const res = await axios.post('http://localhost:18085/monitor/run', { max_results: 50 }, { timeout: 120000 })
-    scanResult.value = res.data
-    // 항상 목록 갱신 — kafka_published=0이어도 이전 실행 결과가 ChromaDB에 있을 수 있음
-    const delay = res.data.kafka_published > 0 ? 5000 : 1000
-    setTimeout(() => fetchPapers(15).then(d => { realPapers.value = d }), delay)
-  } catch {
-    scanResult.value = { error: true }
-  } finally {
-    scanning.value = false
-    setTimeout(() => { scanResult.value = null }, 10000)
-  }
+    await monitoringClient.post('/api/monitor/run', { max_results: 50 }, { timeout: 10000 })
+  } catch { /* already_running or net error — still poll */ }
+
+  let pollCount = 0
+  scanPollTimer = setInterval(async () => {
+    pollCount++
+    const papers = await fetchPapers(15).catch(() => null)
+    if (papers) {
+      realPapers.value = papers
+      if (papers.length > scanStartCount) {
+        scanResult.value = { newCount: papers.length - scanStartCount }
+        stopScan()
+        return
+      }
+    }
+    if (pollCount >= 11) {
+      scanResult.value = { done: true }
+      stopScan()
+    }
+  }, 8000)
+
+  scanStopTimer = setTimeout(stopScan, 95000)
+}
+
+function stopScan() {
+  scanning.value = false
+  clearInterval(scanPollTimer)
+  clearTimeout(scanStopTimer)
+  scanPollTimer = null
+  scanStopTimer = null
+  setTimeout(() => { scanResult.value = null }, 10000)
 }
 
 const tooltip = reactive({ show: false, title: '', meta: '', left: 0, top: 0 })
@@ -451,7 +481,42 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer)
+  stopScan()
   if (animId) cancelAnimationFrame(animId)
   window.removeEventListener('resize', resizeV)
 })
 </script>
+
+<style scoped>
+@keyframes scan-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,.5); }
+  50%       { box-shadow: 0 0 12px 4px rgba(37,99,235,.15); }
+}
+@keyframes dot-blink {
+  0%, 80%, 100% { opacity: .2; }
+  40%           { opacity: 1; }
+}
+@keyframes live-dot {
+  0%, 100% { transform: scale(1); opacity: .8; }
+  50%      { transform: scale(1.5); opacity: .3; }
+}
+
+.scan-btn.loading { animation: scan-pulse 1.5s ease infinite; }
+
+.scan-live-banner {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: rgba(147,197,253,.85);
+  padding: 6px 12px; margin-top: 6px;
+  background: rgba(37,99,235,.1);
+  border: 1px solid rgba(37,99,235,.2);
+  border-radius: 8px;
+}
+.scan-live-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #3b82f6;
+  animation: live-dot 1.2s ease infinite;
+}
+.scan-dots span { animation: dot-blink 1.4s infinite; }
+.scan-dots span:nth-child(2) { animation-delay: .2s; }
+.scan-dots span:nth-child(3) { animation-delay: .4s; }
+</style>

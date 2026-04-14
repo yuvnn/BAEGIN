@@ -11,6 +11,7 @@ export const store = reactive({
   curPaper: PAPERS[0],
   p4Paper: PAPERS[0],
   generatedReports: [],
+  currentReportId: null,
   searchQuery: '',
   curCat: '전체',
   curSort: 'latest',
@@ -46,8 +47,14 @@ export const store = reactive({
     if (id === 'p1') this.p1ModalOpen = false
   },
 
-  openPaper(id) {
-    const p = PAPERS.find(x => x.id === id)
+  openPaper(idOrPaper) {
+    if (typeof idOrPaper === 'object' && idOrPaper !== null) {
+      this.curPaper = idOrPaper
+      this.p4Paper = idOrPaper
+      this.go('p3')
+      return
+    }
+    const p = PAPERS.find(x => x.id === idOrPaper)
     if (!p) return
     this.curPaper = p
     this.p4Paper = p
@@ -72,6 +79,11 @@ export const store = reactive({
     const p = PAPERS.find(x => x.id === r.paperId)
     if (!p) return
     this.p4Paper = p
+    this.go('p4')
+  },
+
+  viewSavedReport(reportId) {
+    this.currentReportId = reportId
     this.go('p4')
   },
 

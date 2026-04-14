@@ -1,6 +1,6 @@
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import arxiv
 import requests
@@ -56,6 +56,7 @@ def _fetch_arxiv_group(
                     "url": result.entry_id,
                     "pdf_url": pdf_url,
                     "categories": result.categories,
+                    "arxiv_categories": result.categories,  # metadata_filter 호환
                     "comment": result.comment or "",
                 }
             )
@@ -67,7 +68,10 @@ def _fetch_arxiv_group(
 def fetch_arxiv_ai_papers(
     last_run_dt: datetime | None = None, max_results: int = 1000
 ) -> list[dict]:
-    date_filter = last_run_dt.strftime("%Y%m%d0000") if last_run_dt else ""
+    # 항상 최근 7일 윈도우 사용 — last_run_dt가 오늘이면 arXiv가 500 반환함
+    # dedup은 seen_papers.json이 담당
+    window_start = datetime.utcnow() - timedelta(days=7)
+    date_filter = window_start.strftime("%Y%m%d0000")
     per_group = max(max_results // len(_ARXIV_CATEGORY_GROUPS), 50)
 
     seen_ids: set[str] = set()

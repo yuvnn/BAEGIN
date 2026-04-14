@@ -176,6 +176,11 @@ body{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg);color
 .viz-info{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:10px;color:rgba(120,150,220,0.4);background:rgba(2,6,15,0.42);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:none;border-radius:12px;padding:8px 14px;z-index:5;pointer-events:none;white-space:nowrap;}
 .plist-empty{font-size:12px;color:rgba(150,170,230,0.4);text-align:center;padding:20px 0;}
 .mbtn:disabled{opacity:0.4;cursor:not-allowed;}
+.scan-btn{font-size:9.5px;padding:4px 11px;border-radius:20px;font-weight:600;background:rgba(79,142,245,0.18);border:1px solid rgba(79,142,245,0.35);color:rgba(150,195,255,0.9);cursor:pointer;transition:all .2s;font-family:inherit;}
+.scan-btn:hover:not(:disabled){background:rgba(79,142,245,0.32);}
+.scan-btn.loading,.scan-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.scan-toast{font-size:10.5px;color:rgba(170,200,255,0.85);background:rgba(79,142,245,0.12);border:1px solid rgba(79,142,245,0.2);border-radius:10px;padding:8px 12px;position:relative;z-index:2;margin-top:2px;}
+.scan-toast.error{color:rgba(255,160,130,0.85);background:rgba(255,100,50,0.1);border-color:rgba(255,100,50,0.2);}
 
 /* ── PAGE 6 — AI Reviewer ── */
 #p6{overflow-y:auto;height:calc(100vh - 52px);background:var(--bg);}

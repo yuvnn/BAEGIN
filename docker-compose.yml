@@ -25,7 +25,14 @@ services:
     ports:
       - "15173:80"
     depends_on:
-      - api-gateway
+      api-gateway:
+        condition: service_started
+      internal-service:
+        condition: service_healthy
+      auth-server:
+        condition: service_started
+      user-service:
+        condition: service_started
 
   auth-server:
     build: ./auth-server
@@ -78,6 +85,8 @@ services:
 
   internal-service:
     build: ./internal-service
+    env_file:
+      - ./.env
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000
@@ -85,6 +94,8 @@ services:
       - CHROMA_COLLECTION_INTERNAL=internal_docs
     ports:
       - "18084:8000"
+    volumes:
+      - ./data/internal_docs:/data/internal_docs:ro
     depends_on:
       - chroma
     healthcheck:
@@ -107,6 +118,8 @@ services:
       - PAPER_SERVICE_URL=http://paper-service:8000
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - MONITOR_INTERVAL_MINUTES=60
+      - IMPACT_THRESHOLD=30
+      - HF_UPVOTE_THRESHOLD=2
       - EUREKA_SERVER=http://eureka-server:8761/eureka
     ports:
       - "18085:8000"

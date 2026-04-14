@@ -10,7 +10,7 @@ from langchain_openai import ChatOpenAI
 
 logger = logging.getLogger(__name__)
 
-IMPACT_THRESHOLD = int(os.getenv("IMPACT_THRESHOLD", "50"))
+IMPACT_THRESHOLD = int(os.getenv("IMPACT_THRESHOLD", "30"))
 
 _SYSTEM_PROMPT = """\
 You are an AI research impact evaluator.

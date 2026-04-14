@@ -6,13 +6,14 @@
         <canvas ref="vizCanvasRef" id="vizCanvas" :class="{ drag: isDragging }"></canvas>
         <div class="viz-info">드래그로 회전 · 스크롤로 확대/축소 · 클릭으로 논문 선택</div>
         <!-- Automated Reviewer Panel -->
-        <div class="reviewer-panel">
+        <div class="reviewer-panel" @click="store.go('p6')">
           <div class="rp-title">Automated Reviewer</div>
           <div class="rp-desc">3인 심사 앙상블<br>+ 반성 루프 + Area Chair</div>
           <div class="rp-score-row">
             <span class="rp-badge accept">≥ 6.0 Accept</span>
             <span class="rp-badge range">AIRA 1~10</span>
           </div>
+          <div class="rp-hint">클릭하여 자세히 보기 →</div>
         </div>
         <div class="p1-legend">
           <div v-for="cl in CL" :key="cl.name" class="p1-legend-item">
@@ -68,7 +69,18 @@
       <div class="p1-right">
         <div style="display:flex;align-items:center;justify-content:space-between;">
           <div class="p1-sec-title">최신 논문</div>
-          <div class="p1-badge">실시간</div>
+          <div style="display:flex;align-items:center;gap:7px;position:relative;z-index:2;">
+            <button class="scan-btn" :class="{ loading: scanning }" :disabled="scanning" @click="triggerScan">
+              {{ scanning ? '탐색 중...' : '즉시 탐색' }}
+            </button>
+            <div class="p1-badge">실시간</div>
+          </div>
+        </div>
+        <div v-if="scanResult" class="scan-toast" :class="{ error: scanResult.error }">
+          <template v-if="scanResult.error">탐색 실패. 서비스 상태를 확인하세요.</template>
+          <template v-else>
+            수집 {{ scanResult.collected }}편 → 신규 {{ scanResult.after_dedup }}편 → Kafka {{ scanResult.kafka_published }}편 발행
+          </template>
         </div>
         <div class="plist">
           <div v-if="realPapersLoading" class="plist-empty">불러오는 중...</div>
@@ -100,6 +112,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import axios from 'axios'
 import { store } from '../store.js'
 import { PP, CL } from '../data/vizData.js'
 import { PAPERS } from '../data/papers.js'
@@ -114,6 +127,25 @@ const isDragging = ref(false)
 const realPapers = ref([])
 const realPapersLoading = ref(false)
 const activeRealIdx = ref(null)
+const scanning = ref(false)
+const scanResult = ref(null)
+
+async function triggerScan() {
+  scanning.value = true
+  scanResult.value = null
+  try {
+    const res = await axios.post('http://localhost:18085/monitor/run', { max_results: 50 }, { timeout: 120000 })
+    scanResult.value = res.data
+    if (res.data.kafka_published > 0) {
+      setTimeout(() => fetchPapers(15).then(d => { realPapers.value = d }), 5000)
+    }
+  } catch {
+    scanResult.value = { error: true }
+  } finally {
+    scanning.value = false
+    setTimeout(() => { scanResult.value = null }, 10000)
+  }
+}
 
 const tooltip = reactive({ show: false, title: '', meta: '', left: 0, top: 0 })
 

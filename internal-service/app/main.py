@@ -1,12 +1,39 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi import HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from .api.report_routes import router as report_router
 from .chroma_client import ensure_collections, get_chroma_client
 from .ingestion import build_metadata, chunk_text, embed_chunks
 
 app = FastAPI(title="internal-service", version="0.1.0")
+app.include_router(report_router)
+
+
+def _resolve_internal_docs_dir() -> Path:
+    current = Path(__file__).resolve()
+    app_root = current.parents[1]
+    workspace_root = current.parents[2] if len(current.parents) > 2 else app_root
+    candidates = [
+        app_root.parent / "data" / "internal_docs",
+        workspace_root / "data" / "internal_docs",
+        Path("/data/internal_docs"),
+        Path("/app/data/internal_docs"),
+    ]
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_dir():
+            return candidate
+    return candidates[0]
+
+
+INTERNAL_DOCS_DIR = _resolve_internal_docs_dir()
+INTERNAL_DOC_FILE_MAP = {
+    "internal-b482da9a0b960bde": "Web_Service_개발_Mini-Project.pdf",
+}
 
 
 class IngestRequest(BaseModel):
@@ -23,6 +50,40 @@ def startup() -> None:
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok", "service": "internal-service"}
+
+
+@app.get("/assets/internal-docs/{file_name}")
+def get_internal_doc_file(file_name: str):
+    safe_name = Path(file_name).name
+    file_path = INTERNAL_DOCS_DIR / safe_name
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Internal PDF not found: {safe_name}")
+    return FileResponse(path=str(file_path), media_type="application/pdf", filename=safe_name)
+
+
+@app.get("/assets/internal-docs/by-doc/{doc_id}")
+def get_internal_doc_by_id(doc_id: str):
+    mapped = INTERNAL_DOC_FILE_MAP.get(doc_id)
+    if mapped:
+        safe_name = Path(mapped).name
+        file_path = INTERNAL_DOCS_DIR / safe_name
+        if file_path.exists() and file_path.is_file():
+            return FileResponse(path=str(file_path), media_type="application/pdf", filename=safe_name)
+
+    pdf_files = sorted(INTERNAL_DOCS_DIR.glob("*.pdf"))
+    if not pdf_files:
+        # Keep filename deterministic even when only one file is expected.
+        fallback_name = INTERNAL_DOC_FILE_MAP.get("internal-b482da9a0b960bde")
+        if fallback_name:
+            fallback_path = INTERNAL_DOCS_DIR / Path(fallback_name).name
+            if fallback_path.exists() and fallback_path.is_file():
+                return FileResponse(path=str(fallback_path), media_type="application/pdf", filename=fallback_path.name)
+
+    if len(pdf_files) == 1:
+        picked = pdf_files[0]
+        return FileResponse(path=str(picked), media_type="application/pdf", filename=picked.name)
+
+    raise HTTPException(status_code=404, detail=f"Internal PDF not found for doc_id: {doc_id}")
 
 
 @app.post("/ingest/internal")

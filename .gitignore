@@ -1,75 +1,52 @@
+# [Java / Maven / Gradle] - 백엔드 빌드 결과물
+target/
+**/target/
+*.class
+out/
+bin/
+**/bin/
+.gradle/
+**/.gradle/
+build/
+**/build/
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment files
-.env
-*.env
-!.env.example
-
-# Python
+# [Python] - 모니터링/유저 서비스 관련
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.so
-.python-version
+*$py.class
 .venv/
 venv/
 env/
 .pytest_cache/
 .mypy_cache/
-.ruff_cache/
-.hypothesis/
-.ipynb_checkpoints/
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
-build/
-site/
-*.egg-info/
 
-# Node / frontend
+# [Node / Vue] - 프론트엔드 관련 (매우 중요)
 node_modules/
 dist/
-coverage/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.pnpm-store/
-.npm/
-.yarn/
-.parcel-cache/
 .vite/
-*.tsbuildinfo
+npm-debug.log*
 
-# Java / Maven
-target/
-**/target/
-*.class
-out/
+# [Secrets] - 보안 (절대 금지!)
+.env
+*.env
+!.env.example
 
-# Runtime / local data
+# [Runtime / Local Data]
+data/kafka/
 data/chroma/
 data/reports/
-data/kafka/
 local_chroma_test_db/
 
-# IDE / editor
+# [IDE / Editor]
 .idea/
 .vscode/
 *.iml
-
-# Logs and temp
-*.log
-*.tmp
 *.swp
 *.swo
 
-# 개인 파일
-troubleshooting.md
-troubleshooting_template.md
-vue-project/src/views/DashboardView.vue
+# [OS]
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+**.md

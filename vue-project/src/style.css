@@ -389,7 +389,8 @@ body.light-theme { background:#f4f7fd; }
 .rel-item-wrap{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);transition:background .16s;gap:10px;}
 .rel-item-wrap:last-child{border-bottom:none;}
 .rel-item-wrap:hover{background:var(--bg3);}
-.rel-item-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:13px;color:var(--t2);.btn-gen{padding:5px 14px;background:#0d1b2e;color:#e8f0ff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .16s;font-family:inherit;white-space:nowrap;flex-shrink:0;}
+.rel-item-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:13px;color:var(--t2);}
+.btn-gen{padding:5px 14px;background:#0d1b2e;color:#e8f0ff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .16s;font-family:inherit;white-space:nowrap;flex-shrink:0;}
 .btn-gen:hover{background:#1a3060;color:#ffffff;}
 
 /* PAGE 5 — 비교보고서 목록 */

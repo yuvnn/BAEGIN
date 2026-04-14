@@ -20,7 +20,7 @@ env/
 .pytest_cache/
 .mypy_cache/
 
-# [Node / Vue] - 프론트엔드 관련 (매우 중요)
+# [Node / Vue] - 프론트엔드 관련
 node_modules/
 dist/
 .vite/
@@ -49,4 +49,5 @@ local_chroma_test_db/
 **/.DS_Store
 Thumbs.db
 
-**.md
+# [Personal Files] - 상윤님 개인 메모만 제외
+troubleshooting*.md

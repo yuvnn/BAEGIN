@@ -2,17 +2,13 @@ import { monitoringClient, paperServiceClient } from "./client";
 
 // 파이프라인 수동 실행 (게이트웨이 경로 반영)
 export async function runMonitoring(keyword) {
-  const response = await monitoringClient.post("/api/monitor/run", { keyword });
+  const response = await monitoringClient.post("/monitor/run", { keyword });
   return response.data;
 }
 
 // 논문 vs 내부 문서 유사도 비교
 export async function comparePaperWithInternal(paperId, queryText) {
-  // 경로를 /api/monitor/compare 로 통합 (Gateway 설정에 맞춤)
-  const response = await monitoringClient.post("/api/monitor/compare", { 
-    paper_id: paperId, 
-    query_text: queryText 
-  });
+  const response = await monitoringClient.post("/compare", { paper_id: paperId, query_text: queryText });
   return response.data;
 }
 

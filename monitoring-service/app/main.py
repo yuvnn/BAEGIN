@@ -16,6 +16,7 @@ import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI
 from fastapi import HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .comparator import compare_with_internal_docs
@@ -177,6 +178,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="monitoring-service", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class MonitoringRequest(BaseModel):

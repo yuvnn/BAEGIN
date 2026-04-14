@@ -101,7 +101,6 @@ def consume_papers():
             title = paper_data.get("title", "")
             abstract = paper_data.get("abstract", "")
             pdf_url = paper_data.get("pdf_url", "")
-            paper_url = paper_data.get("url", "")
             authors = paper_data.get("authors", [])
             arxiv_categories = paper_data.get("arxiv_categories", [])
             category = classify_category(arxiv_categories)

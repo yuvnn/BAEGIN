@@ -1,4 +1,4 @@
-# Java / Maven / Gradle
+# [Java / Maven / Gradle] - 백엔드 빌드 결과물
 target/
 **/target/
 *.class
@@ -10,14 +10,44 @@ bin/
 build/
 **/build/
 
-# Runtime / Local Data
-# 실제 데이터가 담긴 폴더는 깃 관리에서 제외합니다.
+# [Python] - 모니터링/유저 서비스 관련
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+
+# [Node / Vue] - 프론트엔드 관련
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# [Secrets] - 보안 (절대 금지!)
+.env
+*.env
+!.env.example
+
+# [Runtime / Local Data]
 data/kafka/
 data/chroma/
 data/reports/
 local_chroma_test_db/
 
-# IDE / editor
+# [IDE / Editor]
 .idea/
 .vscode/
 *.iml
+*.swp
+*.swo
+
+# [OS]
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# [Personal Files] - 상윤님 개인 메모만 제외
+**.md

@@ -47,6 +47,7 @@ def fetch_arxiv_papers(
                     "source": "arxiv",
                     "url": result.entry_id,
                     "pdf_url": pdf_url,
+                    "categories": result.categories,
                 }
             )
     except Exception as exc:

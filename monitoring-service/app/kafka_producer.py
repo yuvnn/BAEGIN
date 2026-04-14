@@ -55,6 +55,7 @@ class KafkaEventPublisher:
             "pdf_url": paper.get("pdf_url"),
             "published_at": paper.get("published_at", datetime.utcnow().isoformat()),
             "detected_at": datetime.utcnow().isoformat(),
+            "arxiv_categories": paper.get("categories", []),
         }
         try:
             future = self._producer.send(TOPIC, value=event)

@@ -16,7 +16,7 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 
 pipeline_service = PipelineService()
 storage_service = ReportStorageService()
-stream_service = ReportStreamService(pipeline_service=pipeline_service, storage_service=storage_service)
+stream_service = ReportStreamService(pipeline_service=pipeline_service)
 
 
 class GenerateAcceptedResponse(BaseModel):

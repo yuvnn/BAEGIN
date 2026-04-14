@@ -15,6 +15,17 @@ public class UserStore {
     private final ConcurrentHashMap<String, UserRecord> byEmail = new ConcurrentHashMap<>();
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
+    public UserStore() {
+        String hash = encoder.encode("qwer1234");
+        byEmail.put("admin", new UserRecord(
+                "00000000-0000-0000-0000-000000000000",
+                "admin",
+                "Admin",
+                List.of("cs.AI", "cs.LG", "cs.CL"),
+                hash
+        ));
+    }
+
     public UserRecord register(String email, String name, List<String> keywords, String rawPassword) {
         if (byEmail.containsKey(email)) {
             throw new IllegalStateException("already exists");

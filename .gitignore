@@ -1,40 +1,23 @@
-
-
-.DS_Store
-
-# Environment files
-.env
-*.env
-!.env.example
-
-# Python
-__pycache__/
-*.py[cod]
-
-# Node / frontend build outputs
-node_modules/
-dist/
-
-# Java / Maven build outputs
+# Java / Maven / Gradle
 target/
 **/target/
-**/.gradle/
-**/build/
+*.class
+out/
+bin/
 **/bin/
+.gradle/
+**/.gradle/
+build/
+**/build/
 
-# Runtime data
+# Runtime / Local Data
+# 실제 데이터가 담긴 폴더는 깃 관리에서 제외합니다.
 data/kafka/
 data/chroma/
 data/reports/
+local_chroma_test_db/
 
-# IDE / editor files
+# IDE / editor
 .idea/
 .vscode/
-
-# Logs and temp files
-*.log
-*.tmp
-
-# 개인 파일
-troubleshooting.md
-troubleshooting_template.md
+*.iml

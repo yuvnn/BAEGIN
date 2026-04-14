@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>baggin'</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080e1a;
+  --bg2: #0d1b2e;
+  --bg3: #122040;
+  --card: #0f1e35;
+  --teal: #00d4aa;
+  --blue: #4f8ef5;
+  --orange: #ff7b45;
+  --purple: #8b5cf6;
+  --amber: #f59e0b;
+  --t1: #e8eef4;
+  --t2: #7a96b2;
+  --t3: #4a6380;
+  --border: #1e3050;
+  --border2: #243654;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;overflow-x:hidden;}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;height:52px;background:rgba(8,14,26,.96);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:100;backdrop-filter:blur(10px);}
+.nav-logo{font-size:17px;font-weight:700;color:var(--teal);cursor:pointer;letter-spacing:-.5px;white-space:nowrap;flex-shrink:0;}
+.nav-links{display:flex;gap:2px;position:absolute;left:50%;transform:translateX(-50%);}
+.nav-btn{padding:6px 14px;border-radius:6px;font-size:13px;color:var(--t2);cursor:pointer;border:none;background:none;transition:all .18s;font-family:inherit;}
+.nav-btn:hover{color:var(--t1);background:var(--bg3);}
+.nav-btn.on{color:var(--teal);background:rgba(0,212,170,.1);}
+.nav-sep{color:var(--border2);font-size:16px;user-select:none;}
+.search-box{display:flex;align-items:center;gap:8px;}
+.search-box input{width:210px;padding:7px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--t1);font-size:13px;outline:none;transition:border-color .18s;font-family:inherit;}
+.search-box input:focus{border-color:var(--teal);}
+.search-box input::placeholder{color:var(--t3);}
+.btn-s{padding:7px 16px;background:var(--teal);color:#080e1a;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .18s;font-family:inherit;}
+.btn-s:hover{opacity:.82;}
+.nav-icon{width:28px;height:28px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;color:var(--t2);}
+
+/* PROFILE */
+.prof-wrap{position:relative;}
+.prof-btn{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--teal) 0%,var(--blue) 100%);border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#080e1a;transition:all .18s;letter-spacing:-.3px;font-family:inherit;}
+.prof-btn:hover{transform:scale(1.1);box-shadow:0 0 0 3px rgba(0,212,170,.25);}
+.prof-drop{position:absolute;top:42px;right:0;width:210px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.55);display:none;z-index:999;}
+.prof-drop.open{display:block;}
+.prof-info{padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px;}
+.prof-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--blue));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#080e1a;flex-shrink:0;}
+.prof-name{font-size:13px;font-weight:600;color:var(--t1);}
+.prof-email{font-size:11px;color:var(--t3);margin-top:1px;}
+.prof-item{padding:9px 16px;font-size:13px;color:var(--t2);cursor:pointer;transition:background .14s;display:flex;align-items:center;gap:10px;}
+.prof-item:hover{background:var(--bg3);color:var(--t1);}
+.prof-item-icon{font-size:14px;width:18px;text-align:center;}
+.prof-div{height:1px;background:var(--border);margin:3px 0;}
+.prof-logout{color:var(--orange)!important;}
+
+/* PAGES */
+.page{display:none;margin-top:52px;min-height:calc(100vh - 52px);}
+.page.on{display:flex;flex-direction:column;}
+
+/* ── PAGE 1 (beagin design) ── */
+#p1 {
+  --bg:#03060e;
+  --blue:#2563eb;
+  --orange:#ff7a2f;
+  --orange2:#ff9a55;
+  --border:rgba(37,99,235,0.2);
+  --border-o:rgba(255,122,47,0.3);
+  --text:rgba(210,220,245,0.92);
+  --text2:rgba(148,164,208,0.6);
+  --text3:rgba(90,115,172,0.45);
+  position:relative;
+  height:calc(100vh - 52px);
+  overflow:hidden;
+  background:#03060e;
+  font-family:'DM Sans',sans-serif;
+  color:rgba(210,220,245,0.92);
+}
+#bgCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+#p1 .p1-body{position:relative;z-index:10;display:grid;grid-template-columns:1fr 300px;flex:1;min-height:0;}
+#p1 .p1-left{position:relative;overflow:hidden;}
+#vizCanvas{display:block;cursor:grab;width:100%;height:100%;}
+#vizCanvas.drag{cursor:grabbing;}
+.viz-info{position:absolute;top:14px;left:14px;font-size:10px;color:rgba(120,150,220,0.4);background:rgba(2,6,15,0.42);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:none;border-radius:12px;padding:8px 14px;z-index:5;pointer-events:none;}
+#p1 .p1-legend{position:absolute;bottom:18px;left:16px;display:flex;flex-direction:column;gap:6px;background:rgba(4,10,28,0.48);backdrop-filter:blur(36px) saturate(150%);-webkit-backdrop-filter:blur(36px) saturate(150%);border:none;border-radius:16px;padding:14px 16px;z-index:5;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,20,0.3);}
+#p1 .p1-legend-item{display:flex;align-items:center;gap:8px;font-size:10px;color:rgba(160,180,240,0.6);}
+#p1 .p1-legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.beg-tt{position:absolute;background:rgba(4,10,28,0.62);backdrop-filter:blur(36px);-webkit-backdrop-filter:blur(36px);border:none;border-radius:14px;padding:10px 14px;font-size:11px;pointer-events:none;display:none;z-index:30;max-width:185px;box-shadow:0 8px 32px rgba(0,0,20,0.35);}
+.beg-tt .tt-title{font-weight:500;color:#d0daff;margin-bottom:2px;line-height:1.4;}
+.beg-tt .tt-meta{color:rgba(148,164,208,0.6);font-size:10px;}
+
+/* P1 modal */
+.modal-bg{position:absolute;inset:0;background:rgba(0,2,10,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:50;display:none;align-items:flex-start;justify-content:center;padding-top:24px;overflow-y:auto;}
+.modal-bg.show{display:flex;}
+.modal{background:rgba(4,10,32,0.78);backdrop-filter:blur(48px) saturate(180%);-webkit-backdrop-filter:blur(48px) saturate(180%);border:none;border-radius:36px;width:750px;max-width:94%;padding:42px;position:relative;animation:mIn .22s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 24px 60px rgba(0,0,20,0.55),inset 0 1px 0 rgba(255,255,255,0.07);margin-bottom:24px;display:flex;flex-direction:column;max-height:85vh;overflow:hidden;}
+@keyframes mIn{from{opacity:0;transform:translateY(16px) scale(0.95);}to{opacity:1;transform:none;}}
+.modal-summ-section{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;}
+.modal-summ-label{font-size:15px;color:rgba(110,140,210,0.5);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;flex-shrink:0;}
+.modal-summ-body{flex:1;font-size:16px;color:rgba(170,190,240,0.8);line-height:1.85;background:rgba(37,99,235,0.07);border-radius:18px;padding:18px 21px;overflow-y:auto;max-height:none;}
+.modal-x{position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.07);border:none;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(160,180,240,0.7);font-size:21px;line-height:1;transition:background .2s;}
+.modal-x:hover{background:rgba(255,255,255,0.13);}
+.modal-tag{display:inline-flex;align-items:center;align-self:flex-start;font-size:15px;padding:7px 18px;border-radius:20px;margin-bottom:18px;background:rgba(37,99,235,0.18);color:rgba(180,200,255,0.8);border:none;}
+.modal-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;color:#dde5ff;margin-bottom:12px;line-height:1.45;}
+.modal-authors{font-size:16px;color:rgba(130,155,220,0.65);margin-bottom:20px;}
+.modal-abstract{font-size:16px;color:rgba(160,180,240,0.7);line-height:1.8;margin-bottom:24px;border-left:3px solid rgba(37,99,235,0.35);padding-left:20px;}
+.modal-row{display:flex;gap:15px;margin-bottom:24px;}
+.modal-stat{flex:1;background:rgba(37,99,235,0.1);border:none;border-radius:21px;padding:18px 21px;}
+.modal-stat-label{font-size:13px;color:rgba(110,140,210,0.5);letter-spacing:.08em;margin-bottom:7px;}
+.modal-stat-value{font-family:'Syne',sans-serif;font-size:27px;font-weight:700;}
+.mbar{height:4px;border-radius:2px;background:rgba(37,99,235,0.12);margin-top:10px;overflow:hidden;}
+.mbar-fill{height:100%;border-radius:2px;}
+.modal-actions{display:flex;gap:13px;flex-shrink:0;padding-top:16px;}
+.mbtn{flex:1;padding:18px;border-radius:21px;font-size:16px;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;background:rgba(37,99,235,0.24);color:rgba(190,210,255,0.9);transition:all .2s;}
+.mbtn:hover{background:rgba(37,99,235,0.38);}
+.mbtn.sec{background:rgba(255,255,255,0.06);color:rgba(150,170,230,0.7);}
+.mbtn.sec:hover{background:rgba(255,255,255,0.1);}
+.modal-rel{margin-bottom:24px;}
+.modal-rel-title{font-size:15px;color:rgba(110,140,210,0.5);letter-spacing:.08em;margin-bottom:12px;}
+.modal-rel-list{display:flex;flex-direction:column;gap:7px;}
+.modal-rel-item{font-size:15px;color:rgba(150,170,240,0.65);background:rgba(37,99,235,0.08);border:none;border-radius:15px;padding:12px 18px;cursor:pointer;transition:all .18s;}
+.modal-rel-item:hover{background:rgba(37,99,235,0.18);color:#c8d4ff;}
+
+/* P1 right panel */
+#p1 .p1-right{
+  position:relative;
+  border-left:none;
+  background:rgba(255,255,255,0.04);
+  backdrop-filter:blur(60px) saturate(200%) brightness(1.08);
+  -webkit-backdrop-filter:blur(60px) saturate(200%) brightness(1.08);
+  display:flex;flex-direction:column;padding:22px 18px;gap:12px;overflow:hidden;
+}
+#p1 .p1-right::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.18),rgba(255,255,255,0));
+  pointer-events:none;z-index:1;
+}
+#p1 .p1-right::after{
+  content:'';position:absolute;top:0;left:0;bottom:0;width:1px;
+  background:linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04),rgba(255,255,255,0));
+  pointer-events:none;z-index:1;
+}
+.p1-sec-title{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(180,200,255,0.4);position:relative;z-index:2;}
+.p1-badge{font-size:10px;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,0.1);backdrop-filter:blur(16px);border:none;color:rgba(200,218,255,0.75);position:relative;z-index:2;}
+.plist{display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;scrollbar-width:none;padding-right:0;position:relative;z-index:2;}
+.plist::-webkit-scrollbar{display:none;}
+.paper{
+  background:rgba(255,255,255,0.06);
+  border:none;
+  border-radius:18px;
+  padding:15px 16px;
+  cursor:pointer;
+  transition:all .22s;
+  position:relative;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 12px rgba(0,0,20,0.18);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+}
+.paper:hover{background:rgba(255,255,255,0.1);box-shadow:inset 0 1px 0 rgba(255,255,255,0.18),0 4px 20px rgba(0,0,30,0.22);}
+.paper.active{background:rgba(37,99,235,0.18);box-shadow:inset 0 1px 0 rgba(255,255,255,0.16),0 4px 20px rgba(10,30,180,0.25);}
+.ptop{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px;}
+.ptitle{font-size:11.5px;font-weight:500;color:rgba(220,230,255,0.9);line-height:1.45;flex:1;}
+.pscore{
+  font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;
+  white-space:nowrap;flex-shrink:0;
+  background:rgba(255,255,255,0.1);
+  backdrop-filter:blur(12px);
+  color:rgba(210,225,255,0.9);border:none;
+}
+.sh{background:rgba(255,255,255,0.13);color:rgba(220,235,255,0.95);}
+.sm{background:rgba(255,255,255,0.09);color:rgba(195,215,255,0.85);}
+.sl{background:rgba(255,255,255,0.06);color:rgba(160,180,230,0.7);}
+.pmeta{display:flex;align-items:center;gap:8px;margin-top:4px;}
+.ptag{font-size:9.5px;color:rgba(150,170,230,0.45);}
+.pyear{font-size:9.5px;padding:2px 9px;border-radius:20px;background:rgba(255,255,255,0.07);color:rgba(170,190,255,0.65);border:none;}
+.cdot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+.tbar{height:1.5px;border-radius:2px;background:rgba(255,255,255,0.07);margin-top:8px;overflow:hidden;}
+.tbar-fill{height:100%;border-radius:2px;}
+.gen-btn{
+  width:100%;padding:13px;border-radius:16px;border:none;
+  background:rgba(255,255,255,0.09);
+  backdrop-filter:blur(20px);
+  color:rgba(200,218,255,0.82);font-size:11px;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all .2s;
+  letter-spacing:0.02em;position:relative;z-index:2;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.gen-btn:hover{background:rgba(255,255,255,0.15);}
+
+/* TAGS (for p2/p3) */
+.tag{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:500;}
+.tt{background:rgba(0,212,170,.15);color:var(--teal);}
+.tb{background:rgba(79,142,245,.15);color:var(--blue);}
+.to{background:rgba(255,123,69,.15);color:var(--orange);}
+.tp{background:rgba(139,92,246,.15);color:var(--purple);}
+.ta{background:rgba(245,158,11,.15);color:var(--amber);}
+
+/* ── PAGE 2 ── */
+#p2{overflow:hidden;}
+.p2-head{padding:22px 28px 0;border-bottom:1px solid var(--border);}
+.pg-title{font-size:19px;font-weight:700;margin-bottom:14px;}
+.fl{margin-bottom:13px;}
+.fl-label{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
+.fl-tags{display:flex;flex-wrap:wrap;gap:7px;}
+.ftag{padding:5px 13px;border-radius:20px;font-size:12px;cursor:pointer;transition:all .16s;border:1px solid var(--border);color:var(--t2);background:transparent;font-family:inherit;}
+.ftag:hover{border-color:var(--teal);color:var(--teal);}
+.ftag.on{background:rgba(0,212,170,.13);border-color:var(--teal);color:var(--teal);}
+.fl-row{display:flex;align-items:center;gap:10px;padding-bottom:14px;}
+.date-in{padding:6px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--t1);font-size:12px;outline:none;font-family:inherit;}
+.date-in:focus{border-color:var(--teal);}
+.sort-wrap{display:flex;gap:4px;}
+.sbtn{padding:6px 13px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--t2);transition:all .16s;font-family:inherit;}
+.sbtn:hover{color:var(--t1);background:var(--bg3);}
+.sbtn.on{background:rgba(0,212,170,.13);border-color:var(--teal);color:var(--teal);}
+.paper-list{flex:1;overflow-y:auto;padding:14px 28px;}
+.paper-list::-webkit-scrollbar{width:3px;}
+.paper-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.pcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:15px 18px;margin-bottom:9px;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:14px;}
+.pcard:hover{border-color:var(--border2);background:var(--bg3);transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.3);}
+.pcard-main{flex:1;min-width:0;}
+.pcard-title{font-size:14px;font-weight:600;margin-bottom:5px;}
+.pcard-abs{font-size:12px;color:var(--t2);margin-bottom:7px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.pcard-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--t3);}
+.pcard-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:70px;}
+
+/* ── PAGE 3 ── */
+#p3{overflow-y:auto;height:calc(100vh - 52px);}
+.p3-inner{padding:22px 28px;display:flex;flex-direction:column;gap:14px;min-height:100%;}
+.bc{font-size:12px;color:var(--t3);display:flex;align-items:center;gap:5px;}
+.bc span{cursor:pointer;}
+.bc span:hover{color:var(--teal);}
+.bc .sep{color:var(--border2);}
+.dh{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;}
+.dh-title{font-size:17px;font-weight:700;margin-bottom:7px;}
+.dh-row{display:flex;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap;}
+.dh-author{font-size:13px;color:var(--t2);}
+.dh-sub{font-size:12px;color:var(--t3);}
+.dh-tags{display:flex;gap:6px;flex-wrap:wrap;}
+.dbody{display:flex;gap:16px;min-height:420px;}
+.d-orig{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;}
+.d-right{flex:1;display:flex;flex-direction:column;gap:14px;}
+.d-summ{background:var(--card);border:1px solid var(--border);border-radius:10px;flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:200px;}
+.d-rel{background:var(--card);border:1px solid var(--border);border-radius:10px;}
+.sec-head{padding:12px 18px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;justify-content:space-between;}
+.sec-body{padding:18px;overflow-y:auto;flex:1;font-size:13px;line-height:1.8;color:var(--t2);}
+.sec-body::-webkit-scrollbar{width:3px;}
+.sec-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.rel-item{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--t2);cursor:pointer;transition:background .16s;display:flex;align-items:center;gap:8px;}
+.rel-item:last-child{border-bottom:none;}
+.rel-item:hover{background:var(--bg3);color:var(--t1);}
+.rel-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+.banner{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.banner-txt{font-size:13px;color:var(--t2);}
+.banner-txt strong{color:var(--t1);}
+.btn-mk{padding:8px 18px;background:var(--teal);color:#080e1a;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .18s;font-family:inherit;}
+.btn-mk:hover{opacity:.82;}
+
+/* ── PAGE 4 ── */
+#p4{height:calc(100vh - 52px);overflow:hidden;}
+.c4-head{padding:18px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.c4-title{font-size:19px;font-weight:700;}
+.btn-back{padding:6px 13px;background:transparent;color:var(--t2);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;transition:all .16s;font-family:inherit;}
+.btn-back:hover{color:var(--t1);background:var(--bg3);}
+.c4-body{flex:1;display:flex;overflow:hidden;height:calc(100% - 61px);}
+.c4-left{flex:1;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.c4-right{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.c4-phead{padding:13px 22px;border-bottom:1px solid var(--border);font-size:11px;font-weight:600;color:var(--t2);text-transform:uppercase;letter-spacing:.5px;background:var(--bg2);}
+.c4-tabs{display:flex;border-bottom:1px solid var(--border);background:var(--bg2);padding:0 22px;}
+.ctab{padding:11px 16px;font-size:13px;cursor:pointer;color:var(--t2);border-bottom:2px solid transparent;transition:all .16s;margin-bottom:-1px;font-family:inherit;background:none;border-top:none;border-left:none;border-right:none;}
+.ctab:hover{color:var(--t1);}
+.ctab.on{color:var(--teal);border-bottom-color:var(--teal);}
+.c4-content{flex:1;overflow-y:auto;padding:22px;font-size:13px;line-height:1.8;color:var(--t2);}
+.c4-content::-webkit-scrollbar{width:3px;}
+.c4-content::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.ins-sec{margin-bottom:18px;}
+.ins-sec h3{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--border);}
+.ins-pt{display:flex;gap:9px;margin-bottom:7px;font-size:13px;}
+.ins-bul{color:var(--teal);flex-shrink:0;}
+.empty-state{text-align:center;padding:60px;color:var(--t3);font-size:14px;}
+
+/* ── LIGHT THEME: P2, P3, P4 ── */
+body.light-theme { background:#f4f7fd; }
+
+#p2, #p3, #p4 {
+  --bg: #f4f7fd;
+  --bg2: #0d1b2e;
+  --bg3: #e6eef8;
+  --card: #ffffff;
+  --t1: #080e1a;
+  --t2: #1e3a5f;
+  --t3: #6688aa;
+  --border: #ccd8ee;
+  --border2: #aec0d8;
+  background: #f4f7fd;
+  color: #080e1a;
+}
+
+/* 카드 그림자 */
+#p2 .pcard { box-shadow:0 1px 8px rgba(13,27,46,.07); }
+#p2 .pcard:hover { box-shadow:0 4px 20px rgba(13,27,46,.13); transform:translateY(-1px); }
+#p3 .dh, #p3 .d-orig, #p3 .d-summ, #p3 .d-rel, #p3 .banner { box-shadow:0 1px 8px rgba(13,27,46,.07); }
+
+/* p3 섹션 헤더 — 진한 남색 */
+#p3 .sec-head, #p4 .c4-phead {
+  background:#0d1b2e;
+  color:#88aacc;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+#p3 .sec-head .btn-back {
+  color:rgba(180,210,240,.75);
+  border-color:rgba(180,210,240,.2);
+}
+#p3 .sec-head .btn-back:hover {
+  background:rgba(255,255,255,.1);
+  color:#ffffff;
+}
+
+/* p3 본문 */
+#p3 .sec-body { color:var(--t2); }
+#p3 .rel-item { color:var(--t2); border-bottom-color:var(--border); }
+#p3 .rel-item:hover { background:var(--bg3); color:var(--t1); }
+#p3 .rel-dot { background:#4f8ef5; }
+#p3 .bc { color:var(--t3); }
+#p3 .bc span:hover { color:var(--teal); }
+
+/* p4 탭 바 — 진한 남색 */
+#p4 .c4-head { border-bottom-color:var(--border); }
+#p4 .c4-body { height:calc(100% - 61px); }
+#p4 .c4-left { border-right-color:var(--border); }
+#p4 .c4-tabs {
+  background:#0d1b2e;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  padding:0 22px;
+}
+#p4 .ctab { color:rgba(160,200,240,.45); border-bottom:2px solid transparent; }
+#p4 .ctab:hover { color:rgba(200,225,255,.75); }
+#p4 .ctab.on { color:#ffffff; border-bottom-color:var(--teal); }
+#p4 .c4-content { color:var(--t2); }
+#p4 .ins-sec h3 { color:var(--t1); border-bottom-color:var(--border); }
+#p4 .ins-bul { color:var(--teal); }
+
+/* 스크롤바 */
+#p2 .paper-list::-webkit-scrollbar-thumb,
+#p3 .sec-body::-webkit-scrollbar-thumb,
+#p4 .c4-content::-webkit-scrollbar-thumb { background:#b8cce0; }
+
+/* p2 필터 헤더 */
+#p2 .p2-head { background:#ffffff; }
+#p2 .fl-label { color:var(--t3); }
+
+/* p3 브레드크럼 */
+#p3 .dh-author { color:var(--t2); }
+#p3 .dh-sub { color:var(--t3); }
+#p3 .banner-txt { color:var(--t2); }
+#p3 .banner-txt strong { color:var(--t1); }
+
+/* 관련 사내문서 생성하기 버튼 */
+.rel-item-wrap{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);transition:background .16s;gap:10px;}
+.rel-item-wrap:last-child{border-bottom:none;}
+.rel-item-wrap:hover{background:var(--bg3);}
+.rel-item-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;font-size:12px;color:var(--t2);}
+.btn-gen{padding:5px 14px;background:#0d1b2e;color:#e8f0ff;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .16s;font-family:inherit;white-space:nowrap;flex-shrink:0;}
+.btn-gen:hover{background:#1a3060;color:#ffffff;}
+
+/* PAGE 5 — 비교보고서 목록 */
+#p5{overflow:hidden;}
+#p5, #p5 * { --bg:#f4f7fd; --bg2:#0d1b2e; --bg3:#e6eef8; --card:#ffffff; --t1:#080e1a; --t2:#1e3a5f; --t3:#6688aa; --border:#ccd8ee; --border2:#aec0d8; }
+#p5{ background:#f4f7fd; color:#080e1a; }
+.rcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:15px 18px;margin-bottom:9px;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:14px;box-shadow:0 1px 8px rgba(13,27,46,.07);}
+.rcard:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(13,27,46,.13);}
+.rcard-badge{font-size:10px;padding:4px 12px;border-radius:20px;background:rgba(0,212,170,.12);color:#00d4aa;font-weight:600;flex-shrink:0;white-space:nowrap;}
+.rcard-date{font-size:11px;color:#6688aa;}
+
+/* ── CHATBOT ─────────────────────────────── */
+#chat-fab{position:fixed;bottom:28px;right:28px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#00d4aa);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,99,235,0.45);z-index:9999;transition:transform .2s,box-shadow .2s;}
+#chat-fab:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(37,99,235,0.6);}
+#chat-fab svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+#chat-fab .chat-close{display:none;}
+#chat-fab.open .chat-icon{display:none;}
+#chat-fab.open .chat-close{display:block;}
+#chat-window{position:fixed;bottom:92px;right:28px;width:360px;max-width:calc(100vw - 40px);background:rgba(8,14,28,0.97);border:1px solid rgba(37,99,235,0.25);border-radius:20px;box-shadow:0 16px 48px rgba(0,0,20,0.55);z-index:9998;display:none;flex-direction:column;overflow:hidden;backdrop-filter:blur(24px);animation:chatIn .22s cubic-bezier(0.34,1.56,0.64,1);}
+#chat-window.open{display:flex;}
+@keyframes chatIn{from{opacity:0;transform:translateY(16px) scale(0.95);}to{opacity:1;transform:none;}}
+.chat-head{padding:16px 18px;border-bottom:1px solid rgba(37,99,235,0.15);display:flex;align-items:center;gap:10px;}
+.chat-head-dot{width:8px;height:8px;border-radius:50%;background:#00d4aa;flex-shrink:0;box-shadow:0 0 6px #00d4aa;}
+.chat-head-name{font-size:14px;font-weight:600;color:#dde5ff;flex:1;}
+.chat-head-sub{font-size:11px;color:rgba(110,140,210,0.6);}
+.chat-msgs{flex:1;max-height:320px;overflow-y:auto;padding:16px 14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:rgba(37,99,235,0.2) transparent;}
+.chat-msgs::-webkit-scrollbar{width:3px;}
+.chat-msgs::-webkit-scrollbar-thumb{background:rgba(37,99,235,0.2);border-radius:2px;}
+.chat-bubble{max-width:82%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.6;}
+.chat-bubble.bot{background:rgba(37,99,235,0.12);color:rgba(180,200,255,0.9);border-radius:4px 14px 14px 14px;align-self:flex-start;}
+.chat-bubble.user{background:rgba(37,99,235,0.32);color:#fff;border-radius:14px 4px 14px 14px;align-self:flex-end;}
+.chat-bubble.typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:rgba(150,180,255,0.6);animation:blink 1.2s infinite;margin:0 1px;}
+.chat-bubble.typing span:nth-child(2){animation-delay:.2s;}
+.chat-bubble.typing span:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,80%,100%{opacity:.3;}40%{opacity:1;}}
+.chat-chips{padding:0 14px 10px;display:flex;flex-wrap:wrap;gap:6px;}
+.chat-chip{font-size:11px;padding:5px 11px;border-radius:20px;border:1px solid rgba(37,99,235,0.3);background:rgba(37,99,235,0.08);color:rgba(160,190,255,0.8);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.chat-chip:hover{background:rgba(37,99,235,0.22);color:#fff;border-color:rgba(37,99,235,0.5);}
+.chat-input-row{padding:10px 12px;border-top:1px solid rgba(37,99,235,0.12);display:flex;gap:8px;align-items:center;}
+#chat-input{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(37,99,235,0.2);border-radius:10px;padding:9px 12px;font-size:13px;color:#dde5ff;font-family:inherit;outline:none;transition:border .15s;}
+#chat-input::placeholder{color:rgba(110,140,210,0.4);}
+#chat-input:focus{border-color:rgba(37,99,235,0.5);}
+#chat-send{width:34px;height:34px;border-radius:8px;border:none;background:rgba(37,99,235,0.4);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;}
+#chat-send:hover{background:rgba(37,99,235,0.65);}
+#chat-send svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo" onclick="if(document.getElementById('modalBg'))document.getElementById('modalBg').classList.remove('show');go('p1')">baggin'</div>
+  <div class="nav-links">
+    <button class="nav-btn on" id="nb-p1" onclick="go('p1')">탐색</button>
+    <span class="nav-sep">|</span>
+    <button class="nav-btn" id="nb-p2" onclick="go('p2')">논문리스트</button>
+    <span class="nav-sep">|</span>
+    <button class="nav-btn" id="nb-p5" onclick="go('p5')">비교보고서</button>
+  </div>
+  <div class="search-box">
+    <input type="text" id="si" placeholder="논문 검색..." onkeydown="if(event.key==='Enter')doSearch()">
+    <button class="btn-s" onclick="doSearch()">검색</button>
+    <div class="prof-wrap" id="profWrap">
+      <button class="prof-btn" onclick="toggleProf()" title="프로필">KG</button>
+      <div class="prof-drop" id="profDrop">
+        <div class="prof-info">
+          <div class="prof-avatar">KG</div>
+          <div>
+            <div class="prof-name">김규리</div>
+            <div class="prof-email">gyuri.kim@baggin.ai</div>
+          </div>
+        </div>
+        <div class="prof-item"><span class="prof-item-icon">⚙</span>설정</div>
+        <div class="prof-item"><span class="prof-item-icon">🔔</span>알림</div>
+        <div class="prof-item"><span class="prof-item-icon">📁</span>내 문서</div>
+        <div class="prof-div"></div>
+        <div class="prof-item prof-logout"><span class="prof-item-icon">→</span>로그아웃</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE 1 (beagin design) -->
+<div id="p1" class="page on">
+  <canvas id="bgCanvas"></canvas>
+  <div class="p1-body">
+    <div class="p1-left" id="leftPanel">
+      <canvas id="vizCanvas"></canvas>
+      <div class="viz-info">드래그로 회전 · 스크롤로 확대/축소 · 클릭으로 논문 선택</div>
+      <div class="p1-legend">
+        <div class="p1-legend-item"><div class="p1-legend-dot" style="background:#3b82f6"></div>NLP · 언어모델</div>
+        <div class="p1-legend-item"><div class="p1-legend-dot" style="background:#ff7a2f"></div>AI · 기계학습</div>
+        <div class="p1-legend-item"><div class="p1-legend-dot" style="background:#ef4444"></div>이상탐지</div>
+        <div class="p1-legend-item"><div class="p1-legend-dot" style="background:#ff9a55"></div>컴퓨터비전</div>
+        <div class="p1-legend-item"><div class="p1-legend-dot" style="background:#1e4fba"></div>추천시스템</div>
+        <div class="p1-legend-item"><div class="p1-legend-dot" style="background:#ffb870"></div>멀티에이전트</div>
+      </div>
+      <div class="beg-tt" id="tt"><div class="tt-title" id="tt-t"></div><div class="tt-meta" id="tt-m"></div></div>
+
+      <div class="modal-bg" id="modalBg">
+        <div class="modal">
+          <div class="modal-x" id="modalX">×</div>
+          <div class="modal-tag" id="m-tag"></div>
+          <div class="modal-title" id="m-title"></div>
+          <div class="modal-authors" id="m-auth"></div>
+          <div class="modal-abstract" id="m-abs"></div>
+          <div class="modal-row">
+            <div class="modal-stat"><div class="modal-stat-label">신뢰도</div><div class="modal-stat-value" id="m-sc"></div><div class="mbar"><div class="mbar-fill" id="m-scb"></div></div></div>
+            <div class="modal-stat"><div class="modal-stat-label">인용 수</div><div class="modal-stat-value" id="m-ci" style="color:#c8d4ff"></div></div>
+            <div class="modal-stat"><div class="modal-stat-label">출판연도</div><div class="modal-stat-value" id="m-yr" style="color:#c8d4ff"></div></div>
+          </div>
+          <div class="modal-summ-section">
+            <div class="modal-summ-label">요약보고서</div>
+            <div class="modal-summ-body" id="m-summ"></div>
+          </div>
+          <div class="modal-actions">
+            <button class="mbtn" id="m-openp3">논문 보러가기 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="p1-right">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="p1-sec-title">최신 논문</div>
+        <div class="p1-badge">실시간</div>
+      </div>
+      <div class="plist" id="plist"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div id="p2" class="page">
+  <div class="p2-head">
+    <div class="pg-title">논문 리스트</div>
+    <div class="fl">
+      <div class="fl-label">카테고리 필터</div>
+      <div class="fl-tags" id="cat-filters"></div>
+    </div>
+    <div class="fl-row">
+      <div style="display:flex;align-items:center;gap:8px;flex:1;">
+        <span style="font-size:12px;color:var(--t3);">날짜 필터</span>
+        <input type="date" class="date-in" id="df">
+        <span style="font-size:12px;color:var(--t3);">~</span>
+        <input type="date" class="date-in" id="dt">
+      </div>
+      <div class="sort-wrap">
+        <button class="sbtn on" id="sb-latest" onclick="setSort('latest')">최신순</button>
+        <button class="sbtn" id="sb-views" onclick="setSort('views')">조회수</button>
+      </div>
+    </div>
+  </div>
+  <div class="paper-list" id="paper-list"></div>
+</div>
+
+<!-- PAGE 3 -->
+<div id="p3" class="page" style="height:calc(100vh - 52px);">
+  <div class="p3-inner">
+    <div class="bc">
+      <span onclick="go('p1')">홈</span><span class="sep">›</span>
+      <span onclick="go('p2')">논문리스트</span><span class="sep">›</span>
+      <span id="bc-t" style="color:var(--t1)">논문 상세</span>
+    </div>
+    <div class="dh">
+      <div class="dh-title" id="d-title"></div>
+      <div class="dh-row">
+        <span class="dh-author" id="d-author"></span>
+        <span class="dh-sub" id="d-date"></span>
+        <span class="dh-sub" id="d-views"></span>
+      </div>
+      <div class="dh-tags" id="d-tags"></div>
+    </div>
+    <div class="dbody">
+      <div class="d-orig">
+        <div class="sec-head">
+          <span>원본</span>
+          <button class="btn-back" style="font-size:11px;" onclick="go('p4')">비교 문서 생성 →</button>
+        </div>
+        <div class="sec-body" id="d-orig"></div>
+      </div>
+      <div class="d-right">
+        <div class="d-summ">
+          <div class="sec-head">요약본</div>
+          <div class="sec-body" id="d-summ"></div>
+        </div>
+        <div class="d-rel">
+          <div class="sec-head" style="padding:11px 14px;">관련된 사내 문서</div>
+          <div id="d-rel"></div>
+        </div>
+      </div>
+    </div>
+    <div class="banner" id="banner">
+      <div class="banner-txt"><strong>관련 사내 문서가 없습니다.</strong> 이 논문을 바탕으로 사내 문서를 만들겠습니까?</div>
+      <button class="btn-mk" onclick="go('p4')">만들겠습니다</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 5 — 비교보고서 목록 -->
+<div id="p5" class="page">
+  <div class="p2-head">
+    <div class="pg-title">사내 비교문서 목록</div>
+  </div>
+  <div class="paper-list" id="report-list">
+    <div class="empty-state">생성하기 버튼을 눌러 첫 사내 비교문서를 만들어보세요.</div>
+  </div>
+</div>
+
+<!-- PAGE 4 -->
+<div id="p4" class="page" style="height:calc(100vh - 52px);">
+  <div class="c4-head">
+    <div class="c4-title">사내 비교 문서</div>
+    <button class="btn-back" onclick="go('p3')">← 논문으로 돌아가기</button>
+  </div>
+  <div class="c4-body">
+    <div class="c4-left">
+      <div class="c4-phead">비교 문서 / 인사이트 보고서</div>
+      <div class="c4-content" id="c4-report"></div>
+    </div>
+    <div class="c4-right">
+      <div class="c4-tabs">
+        <button class="ctab on" onclick="switchTab(this,'c4-t1')">사내문서</button>
+        <button class="ctab" onclick="switchTab(this,'c4-t2')">논문 요약서</button>
+        <button class="ctab" onclick="switchTab(this,'c4-t3')">논문원문</button>
+      </div>
+      <div id="c4-t1" class="c4-content"></div>
+      <div id="c4-t2" class="c4-content" style="display:none;"></div>
+      <div id="c4-t3" class="c4-content" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────
+const PAPERS = [
+  {
+    id:1, title:"Scaling Laws for Neural Language Models",
+    authors:"J. Kaplan, S. McCandlish, T. Henighan et al.",
+    date:"2024-03-15", views:1243,
+    tags:["NLP","LLM","Scaling"], cat:"NLP",
+    abs:"We study empirical scaling laws for language model performance on the cross-entropy loss. The loss scales as a power-law with model size, dataset size, and the amount of compute used for training, with some trends spanning more than seven orders of magnitude.",
+    orig:`1. Introduction\n\nLanguage modeling is a powerful benchmark task for deep learning. We study the scaling behavior of language model performance, examining how loss depends on model size N, dataset size D, and compute C.\n\nWe find that language model performance improves smoothly as we scale up model size, data, and compute:\n\n  L(N) ~ N^{-0.076}\n  L(D) ~ D^{-0.095}\n  L(C) ~ C^{-0.057}\n\n2. Methods\n\nWe train transformer language models ranging from 768 to 1.5 billion non-embedding parameters on the WebText2 dataset.\n\n3. Key Findings\n\n• Performance depends strongly on scale, weakly on model shape\n• Smooth power laws hold across 7 orders of magnitude\n• Large models are more sample-efficient than small models\n• Optimal compute allocation follows a specific ratio of model size to dataset size`,
+    summ:`**핵심 발견:**\n• 모델 크기, 데이터, 컴퓨팅 자원 모두 성능과 거듭제곱 법칙 관계\n• 7 오더에 걸쳐 부드러운 스케일링 확인\n• 큰 모델이 작은 모델보다 샘플 효율 높음\n• 최적 컴퓨팅 배분: 모델 크기와 데이터 크기 비율이 핵심\n\n**실무 시사점:**\n같은 컴퓨팅 예산으로 더 큰 모델을 더 적은 데이터로 훈련하는 것이 최적임을 실증적으로 제시.`,
+    relDocs:["사내 LLM 도입 검토 보고서","2024 AI 인프라 계획서","모델 스케일링 실험 결과"]
+  },
+  {
+    id:2, title:"Attention Is All You Need",
+    authors:"A. Vaswani, N. Shazeer, N. Parmar et al.",
+    date:"2024-02-28", views:3891,
+    tags:["NLP","Transformer","Attention"], cat:"NLP",
+    abs:"We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely. The Transformer achieves state of the art on machine translation tasks while being significantly more parallelizable.",
+    orig:`Abstract\n\nThe dominant sequence transduction models are based on complex recurrent or convolutional neural networks. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms.\n\n1. Introduction\n\nRecurrent neural networks have been firmly established as state of the art approaches in sequence modeling. The Transformer eschews recurrence and instead relies entirely on attention to draw global dependencies between input and output.\n\n2. Model Architecture\n\nEncoder: 6 identical layers\n  - Multi-head self-attention mechanism\n  - Position-wise fully connected feed-forward network\n\nDecoder: 6 identical layers\n  - Masked multi-head attention\n  - Multi-head attention over encoder output\n  - Position-wise feed-forward network\n\nAttention: Scaled Dot-Product\n  Attention(Q,K,V) = softmax(QK^T / √d_k) V`,
+    summ:`**핵심 개념:**\n• 순환 신경망(RNN) 없이 오직 어텐션 메커니즘만 사용\n• 병렬 처리 가능으로 훈련 속도 획기적 향상\n• Multi-head Attention: 다양한 표현 공간에서 동시에 어텐션 계산\n• Positional Encoding으로 순서 정보 보완\n\n**현재 의미:**\n현대 거의 모든 NLP 모델(GPT, BERT, T5 등)의 기반 아키텍처.`,
+    relDocs:["사내 번역 모델 개선 계획","NLP 기술 스택 검토서"]
+  },
+  {
+    id:3, title:"Deep Residual Learning for Image Recognition",
+    authors:"K. He, X. Zhang, S. Ren, J. Sun",
+    date:"2024-01-20", views:2156,
+    tags:["Computer Vision","ResNet","Deep Learning"], cat:"Computer Vision",
+    abs:"We present a residual learning framework to ease the training of networks that are substantially deeper than those used previously. We explicitly reformulate the layers as learning residual functions with reference to the layer inputs.",
+    orig:`1. Introduction\n\nDriven by the significance of depth, a question arises: Is learning better networks as easy as stacking more layers?\n\nHowever, training deeper networks is not easy. The vanishing gradient problem makes it hard to directly train very deep networks.\n\n2. Residual Learning\n\nInstead of hoping each few stacked layers directly fit a desired mapping H(x), we explicitly let these layers fit a residual mapping:\n  F(x) := H(x) − x\n\nThe original mapping is recast into F(x) + x.\n\nThe shortcut connections simply perform identity mapping, and their outputs are added to the outputs of the stacked layers:\n  y = F(x, {W_i}) + x\n\n3. Results\n\n• ImageNet ILSVRC 2015: 3.57% top-5 error\n• 152-layer ResNet trained successfully\n• Won 1st place in ILSVRC and COCO 2015`,
+    summ:`**핵심 아이디어:**\n• Skip connection(잔차 연결)으로 기울기 소실 문제 해결\n• 152개 레이어 모델 훈련 성공\n• ImageNet에서 3.57% top-5 오류율 달성\n\n**실무 활용:**\n이미지 분류, 객체 탐지, 영상 처리 등 거의 모든 CV 태스크의 백본으로 활용 가능.`,
+    relDocs:["제품 이미지 분류 시스템 설계서","CV 모델 벤치마크 결과"]
+  },
+  {
+    id:4, title:"Proximal Policy Optimization Algorithms",
+    authors:"J. Schulman, F. Wolski, P. Dhariwal et al.",
+    date:"2024-01-10", views:987,
+    tags:["RL","PPO","Policy Gradient"], cat:"Reinforcement Learning",
+    abs:"We propose a new family of policy gradient methods for reinforcement learning, which alternate between sampling data through interaction with the environment, and optimizing a surrogate objective function using stochastic gradient ascent.",
+    orig:`Abstract\n\nWe propose PPO, a family of policy gradient methods that alternate between collecting data and optimizing objectives. PPO achieves the data efficiency of TRPO while being much simpler to implement.\n\n1. Background\n\nPolicy gradient methods work by computing an estimator of the policy gradient:\n  ĝ = E[∇θ log πθ(at|st) Ât]\n\n2. Clipped Surrogate Objective\n\nPPO's main innovation is the clipped probability ratio objective:\n  L^CLIP(θ) = E[min(r_t(θ)Ât, clip(r_t(θ), 1-ε, 1+ε)Ât)]\n\nThis prevents excessively large policy updates while maintaining good sample efficiency.\n\n3. Results\n\n• Outperforms previous methods on MuJoCo continuous control\n• Strong performance on Atari games\n• Simple to tune, widely adopted`,
+    summ:`**주요 특징:**\n• TRPO의 성능을 유지하면서 구현 복잡도 대폭 감소\n• Clipped objective function으로 안정적 학습\n• 다양한 환경에서 SOTA 달성\n\n**활용 분야:**\n로봇 제어, 게임 AI, RLHF(인간 피드백 강화학습) 등에 광범위하게 사용됨.`,
+    relDocs:["AI 에이전트 개발 로드맵"]
+  },
+  {
+    id:5, title:"Graph Attention Networks",
+    authors:"P. Veličković, G. Cucurull, A. Casanova et al.",
+    date:"2023-12-15", views:756,
+    tags:["GNN","Graph","Attention"], cat:"Graph Neural Network",
+    abs:"We present graph attention networks (GATs), novel neural network architectures that operate on graph-structured data, leveraging masked self-attentional layers to address the shortcomings of prior methods based on graph convolutions.",
+    orig:`Abstract\n\nGraph attention networks (GATs) operate on graph-structured data. We leverage masked self-attentional layers to address shortcomings of prior graph convolution-based methods.\n\n1. GAT Architecture\n\nInput: set of node features h = {h_1, ..., h_N}, h_i ∈ R^F\nOutput: new node features h' = {h'_1, ..., h'_N}, h'_i ∈ R^{F'}\n\nAttention coefficients:\n  e_ij = a(W h_i, W h_j)\n  α_ij = softmax_j(e_ij)\n\n2. Multi-head Attention\n\nK independent attention heads, concatenated:\n  h'_i = ||_{k=1}^K σ(Σ_{j∈N_i} α_ij^k W^k h_j)\n\n3. Results\n\n• Cora: 83.0% classification accuracy\n• Citeseer: 72.5% classification accuracy\n• PPI: 97.3% micro-F1`,
+    summ:`**핵심 특징:**\n• 이웃 노드들에 서로 다른 가중치 자동 학습\n• Transductive/Inductive 학습 모두 지원\n• Cora, Citeseer 벤치마크에서 SOTA\n\n**적용 사례:**\n소셜 네트워크 분석, 추천 시스템, 분자 구조 예측 등.`,
+    relDocs:["지식 그래프 구축 계획서","추천 시스템 개선 보고서"]
+  },
+  {
+    id:6, title:"Denoising Diffusion Probabilistic Models",
+    authors:"J. Ho, A. Jain, P. Abbeel",
+    date:"2023-11-28", views:2341,
+    tags:["Generative AI","Diffusion","Image Generation"], cat:"Generative AI",
+    abs:"We present high quality image synthesis results using diffusion probabilistic models, a class of latent variable models inspired by considerations from nonequilibrium thermodynamics.",
+    orig:`Abstract\n\nWe present DDPM, achieving high quality image synthesis using diffusion probabilistic models. These models define a Markov chain of diffusion steps to slowly add random noise to data, then learn to reverse this process.\n\n1. Forward Process (Diffusion)\n\nGiven data x_0, the forward process adds Gaussian noise over T steps:\n  q(x_t | x_{t-1}) = N(x_t; √(1-β_t) x_{t-1}, β_t I)\n\n2. Reverse Process (Denoising)\n\nThe learned reverse process:\n  p_θ(x_{t-1} | x_t) = N(x_{t-1}; μ_θ(x_t, t), Σ_θ(x_t, t))\n\nA U-Net backbone predicts the noise at each timestep.\n\n3. Results\n\n• CIFAR-10 FID: 3.17 (surpasses prior GAN methods)\n• High quality 256x256 image synthesis\n• Foundation for Stable Diffusion, DALL-E 3`,
+    summ:`**작동 원리:**\n• Forward: 이미지에 점진적으로 노이즈 추가\n• Reverse: 노이즈에서 이미지 복원하도록 학습\n• U-Net 아키텍처로 각 타임스텝의 노이즈 예측\n\n**현재 활용:**\nStable Diffusion, DALL-E 3, Midjourney 등 거의 모든 현대 이미지 생성 AI의 기반 기술.`,
+    relDocs:["이미지 생성 AI 도입 검토서","콘텐츠 생성 파이프라인 설계서","저작권 및 윤리 가이드라인"]
+  }
+];
+
+const CATS = ["전체","NLP","Computer Vision","Reinforcement Learning","Graph Neural Network","Generative AI"];
+const CAT_TAG = {NLP:'tt','Computer Vision':'tb','Reinforcement Learning':'to','Graph Neural Network':'tp','Generative AI':'ta'};
+const TAG_C = ['tt','tb','to','tp','ta'];
+
+let curSort = 'latest', curCat = '전체', curPaper = PAPERS[0];
+let generatedReports = [];
+
+// ── NAVIGATION ─────────────────────────────────────────────
+function go(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  ['p1','p2','p5'].forEach(k=>{
+    const el=document.getElementById('nb-'+k);
+    if(el) el.classList.toggle('on',
+      k===id || (k==='p2'&&id==='p3') || (k==='p5'&&id==='p4'));
+  });
+  document.body.classList.toggle('light-theme', id !== 'p1');
+  if(id==='p5') renderReportList();
+}
+
+// ── SEARCH ─────────────────────────────────────────────────
+function doSearch() {
+  const q = document.getElementById('si').value.trim();
+  go('p2');
+  renderList(q);
+}
+
+// ── PAGE 2 ─────────────────────────────────────────────────
+function renderCats() {
+  document.getElementById('cat-filters').innerHTML = CATS.map(c=>`
+    <button class="ftag${c===curCat?' on':''}" onclick="setCat('${c}')">${c}</button>`).join('');
+}
+function setCat(c){curCat=c;renderCats();renderList();}
+function setSort(s){
+  curSort=s;
+  ['latest','views'].forEach(k=>document.getElementById('sb-'+k).classList.toggle('on',k===s));
+  renderList();
+}
+function renderList(q='') {
+  let list=[...PAPERS];
+  if(curCat!=='전체') list=list.filter(p=>p.cat===curCat||p.tags.includes(curCat));
+  if(q){const lq=q.toLowerCase();list=list.filter(p=>p.title.toLowerCase().includes(lq));}
+  const df=document.getElementById('df')?.value, dt=document.getElementById('dt')?.value;
+  if(df) list=list.filter(p=>p.date>=df);
+  if(dt) list=list.filter(p=>p.date<=dt);
+  list.sort(curSort==='views'?(a,b)=>b.views-a.views:(a,b)=>b.date.localeCompare(a.date));
+  const el=document.getElementById('paper-list');
+  if(!list.length){el.innerHTML='<div class="empty-state">검색 결과가 없습니다.</div>';return;}
+  el.innerHTML=list.map(p=>`
+    <div class="pcard" onclick="openPaper(${p.id})">
+      <div class="pcard-main">
+        <div class="pcard-title">${p.title}</div>
+        <div class="pcard-abs">${p.abs}</div>
+        <div class="pcard-meta">
+          <span>${p.authors.split(',')[0].trim()} et al. · ${p.date}</span>
+          <span>👁 ${p.views.toLocaleString()}</span>
+        </div>
+      </div>
+      <div class="pcard-side">
+        ${p.tags.slice(0,2).map(t=>`<span class="tag ${CAT_TAG[p.cat]||'tt'}">${t}</span>`).join('')}
+      </div>
+    </div>`).join('');
+}
+
+// ── PAGE 3 ─────────────────────────────────────────────────
+function openPaper(id) {
+  const p = PAPERS.find(x=>x.id===id); if(!p) return;
+  curPaper = p;
+  document.getElementById('bc-t').textContent = p.title.length>45?p.title.slice(0,45)+'…':p.title;
+  document.getElementById('d-title').textContent = p.title;
+  document.getElementById('d-author').textContent = p.authors;
+  document.getElementById('d-date').textContent = p.date;
+  document.getElementById('d-views').textContent = `조회 ${p.views.toLocaleString()}`;
+  document.getElementById('d-tags').innerHTML = p.tags.map((t,i)=>`<span class="tag ${TAG_C[i%5]}">${t}</span>`).join('');
+  document.getElementById('d-orig').innerHTML = fmt(p.orig);
+  document.getElementById('d-summ').innerHTML = fmtMd(p.summ);
+  const rel=document.getElementById('d-rel');
+  if(p.relDocs&&p.relDocs.length){
+    rel.innerHTML=p.relDocs.map(d=>`
+      <div class="rel-item-wrap">
+        <div class="rel-item-left"><div class="rel-dot"></div><span>${d}</span></div>
+        <button class="btn-gen" onclick="generateReport('${d.replace(/'/g,"\\'")}',${p.id})">생성하기</button>
+      </div>`).join('');
+    document.getElementById('banner').style.display='none';
+  } else {
+    rel.innerHTML='<div style="padding:11px 14px;font-size:12px;color:var(--t3)">관련 문서 없음</div>';
+    document.getElementById('banner').style.display='flex';
+  }
+  fillP4(p);
+  go('p3');
+}
+
+function fmt(s){return s.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');}
+function fmtMd(s){
+  return s.replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--t1)">$1</strong>')
+          .replace(/•/g,'<span style="color:var(--teal)">•</span>')
+          .replace(/\n/g,'<br>');
+}
+
+// ── PAGE 4 ─────────────────────────────────────────────────
+function fillP4(p) {
+  document.getElementById('c4-report').innerHTML=`
+    <div class="ins-sec"><h3>📋 인사이트 보고서: ${p.title.length>38?p.title.slice(0,38)+'…':p.title}</h3></div>
+    <div class="ins-sec"><h3>1. 논문 핵심 요약</h3>${fmtMd(p.summ)}</div>
+    <div class="ins-sec"><h3>2. 사내 적용 가능성</h3>
+      <div class="ins-pt"><span class="ins-bul">▶</span><span>예상 성능 개선: <strong style="color:var(--teal)">중-상</strong></span></div>
+      <div class="ins-pt"><span class="ins-bul">▶</span><span>구현 복잡도: <strong style="color:var(--orange)">중간</strong></span></div>
+      <div class="ins-pt"><span class="ins-bul">▶</span><span>필요 자원: GPU 클러스터 최소 4대 이상</span></div>
+    </div>
+    <div class="ins-sec"><h3>3. 경쟁사 동향</h3>
+      <div class="ins-pt"><span class="ins-bul">▶</span><span>A사: 유사 기술 적용 완료 (2023 Q4)</span></div>
+      <div class="ins-pt"><span class="ins-bul">▶</span><span>B사: 파일럿 프로그램 진행 중</span></div>
+      <div class="ins-pt"><span class="ins-bul">▶</span><span>C사: 미도입 — 당사 선점 기회 존재</span></div>
+    </div>
+    <div class="ins-sec"><h3>4. 권고 사항</h3>
+      <div class="ins-pt"><span class="ins-bul">▶</span><span>단기(1-3개월): PoC 진행 및 벤치마크 수행</span></div>
+      <div class="ins-pt"><span class="ins-bul">▶</span><span>중기(3-6개월): 파일럿 서비스 론칭</span></div>
+      <div class="ins-pt"><span class="ins-bul">▶</span><span>장기(6-12개월): 전사 적용 검토</span></div>
+    </div>`;
+  document.getElementById('c4-t1').innerHTML=`
+    <div class="ins-sec"><h3>사내 기술 검토 문서</h3><p>작성일: ${p.date} | 작성자: AI Research Team</p></div>
+    <div class="ins-sec"><h3>개요</h3><p>${p.abs}</p></div>
+    <div class="ins-sec"><h3>기술 검토 결과</h3>
+      <div class="ins-pt"><span class="ins-bul">✓</span><span>알고리즘 검증: 완료</span></div>
+      <div class="ins-pt"><span class="ins-bul">✓</span><span>사내 환경 호환성: 확인 필요</span></div>
+      <div class="ins-pt"><span class="ins-bul">✓</span><span>라이선스: 오픈소스 (Apache 2.0)</span></div>
+    </div>
+    <div class="ins-sec"><h3>관련 사내 프로젝트</h3>${(p.relDocs||[]).map(d=>`<div class="ins-pt"><span class="ins-bul">→</span><span>${d}</span></div>`).join('')}</div>`;
+  document.getElementById('c4-t2').innerHTML=`
+    <div style="font-size:15px;font-weight:600;color:var(--t1);margin-bottom:12px;">${p.title}</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:16px;">${p.authors} · ${p.date}</div>
+    ${fmtMd(p.summ)}`;
+  document.getElementById('c4-t3').innerHTML=`
+    <div style="font-size:15px;font-weight:600;color:var(--t1);margin-bottom:12px;">${p.title}</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:16px;">${p.authors} · ${p.date}</div>
+    ${fmt(p.orig)}`;
+}
+
+// ── 비교보고서 생성 & 목록 ─────────────────────────────────
+function generateReport(docName, paperId) {
+  const p = PAPERS.find(x=>x.id===paperId);
+  generatedReports.unshift({
+    docName,
+    paperTitle: p.title,
+    paperId,
+    createdAt: new Date().toLocaleDateString('ko-KR')
+  });
+  fillP4(p);
+  go('p4');
+}
+
+function renderReportList() {
+  const el = document.getElementById('report-list');
+  if(!generatedReports.length){
+    el.innerHTML='<div class="empty-state">생성하기 버튼을 눌러 첫 사내 비교문서를 만들어보세요.</div>';
+    return;
+  }
+  el.innerHTML = generatedReports.map((r,i)=>`
+    <div class="rcard" onclick="viewReport(${i})">
+      <div class="pcard-main">
+        <div class="pcard-title">${r.docName}</div>
+        <div class="pcard-abs" style="margin-bottom:4px;">관련 논문: ${r.paperTitle}</div>
+        <div class="pcard-meta"><span class="rcard-date">${r.createdAt} 생성</span></div>
+      </div>
+      <div class="rcard-badge">열기 →</div>
+    </div>`).join('');
+}
+
+function viewReport(idx) {
+  const r = generatedReports[idx];
+  const p = PAPERS.find(x=>x.id===r.paperId);
+  fillP4(p);
+  go('p4');
+}
+
+function switchTab(btn, tid) {
+  document.querySelectorAll('.ctab').forEach(t=>t.classList.remove('on'));
+  btn.classList.add('on');
+  ['c4-t1','c4-t2','c4-t3'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById(tid).style.display='block';
+}
+
+// ── PROFILE ────────────────────────────────────────────────
+function toggleProf(){document.getElementById('profDrop').classList.toggle('open');}
+document.addEventListener('click',e=>{
+  const w=document.getElementById('profWrap');
+  if(w&&!w.contains(e.target)) document.getElementById('profDrop').classList.remove('open');
+});
+
+// ── INIT ───────────────────────────────────────────────────
+renderCats();
+renderList();
+fillP4(PAPERS[0]);
+
+// ── PAGE 1 VISUALIZATION (beagin design) ──────────────────
+(function(){
+  const CL=[
+    {name:'NLP · 언어모델', color:'#3b82f6', glow:'rgba(37,99,235,0.32)', cx:0.08,  cy:-0.22,cz:0.05, r:0.19},
+    {name:'AI · 기계학습',  color:'#ff7a2f', glow:'rgba(255,100,30,0.28)',cx:-0.05, cy:0.1,  cz:-0.18,r:0.21},
+    {name:'이상탐지',        color:'#ef4444', glow:'rgba(220,38,38,0.30)', cx:0.22,  cy:0.14, cz:0.12, r:0.14},
+    {name:'컴퓨터비전',      color:'#ff9a55', glow:'rgba(255,130,50,0.25)',cx:-0.2,  cy:-0.08,cz:0.2,  r:0.17},
+    {name:'추천시스템',      color:'#1e4fba', glow:'rgba(25,65,180,0.28)', cx:0.18,  cy:-0.05,cz:-0.2, r:0.15},
+    {name:'멀티에이전트',    color:'#ffb870', glow:'rgba(255,160,80,0.22)',cx:-0.1,  cy:0.25, cz:0.1,  r:0.12},
+  ];
+  const PP=[
+    {title:'Scaling Laws for Neural Language Models in Multilingual Settings',short:'Scaling Laws for Neural LMs',cl:0,score:98,cite:312,year:2025,venue:'arXiv',auth:'Kaplan J., McCandlish S., Henighan T. et al.',abs:'다국어 환경에서 언어 모델의 스케일링 법칙을 체계적으로 분석한 연구. 파라미터 수, 데이터 크기, 컴퓨팅 예산의 관계를 정량적으로 규명하며, 최적의 모델 크기 예측 공식을 제시한다.',rel:[1,3,4]},
+    {title:'GraphRAG: Knowledge Graph-Augmented Retrieval for Complex QA',short:'GraphRAG: KG-Augmented Retrieval',cl:0,score:91,cite:187,year:2025,venue:'IEEE',auth:'Edge D., Trinh H., Cheng N. et al.',abs:'지식 그래프를 활용하여 RAG 시스템의 복잡한 질의응답 성능을 향상시키는 방법론. 엔티티 관계 추론을 통해 단순 벡터 검색의 한계를 극복한다.',rel:[0,4,6]},
+    {title:'Anomaly Detection in Time-Series via Diffusion Models',short:'Anomaly Detection via Diffusion',cl:2,score:87,cite:143,year:2025,venue:'NeurIPS',auth:'Park S., Kim J., Lee H. et al.',abs:'확산 모델을 시계열 이상 탐지에 적용한 연구. 재구성 오차 기반의 이상 점수를 정의하고, 다양한 산업 데이터셋에서 SOTA 성능을 달성한다.',rel:[3,5,6]},
+    {title:'Efficient Fine-tuning of LLMs with LoRA Variants',short:'Efficient Fine-tuning: LoRA Variants',cl:1,score:73,cite:98,year:2024,venue:'ICML',auth:'Hu E., Shen Y., Wallis P. et al.',abs:'LoRA의 변형 기법들을 체계적으로 비교 분석한 연구. AdaLoRA, QLoRA 등 다양한 변형의 효율성과 성능 트레이드오프를 실험적으로 규명한다.',rel:[0,1,4]},
+    {title:'Multi-Agent Debate for Factual Consistency in Generation',short:'Multi-Agent Debate',cl:5,score:89,cite:201,year:2025,venue:'ACL',auth:'Du Y., Li S., Torralba A. et al.',abs:'여러 LLM 에이전트가 토론을 통해 사실 일관성을 높이는 프레임워크. 단일 모델 대비 환각 발생률을 40% 감소시키는 결과를 보인다.',rel:[0,1,3]},
+    {title:'Vision-Language Alignment without Human Annotations',short:'Vision-Language Alignment',cl:3,score:68,cite:76,year:2024,venue:'CVPR',auth:'Radford A., Kim J., Hallacy C. et al.',abs:'인간 레이블 없이 웹 크롤링 데이터만으로 비전-언어 정렬을 달성하는 방법론. 자기지도 학습 목표 함수를 통해 멀티모달 표현 학습을 수행한다.',rel:[2,3,6]},
+    {title:'Federated Learning under Non-IID Data Distribution',short:'Federated Learning Non-IID',cl:4,score:52,cite:44,year:2024,venue:'AAAI',auth:'Li T., Sahu A., Zaheer M. et al.',abs:'비독립동일분포(Non-IID) 데이터 환경에서 연합 학습의 수렴 문제를 다룬 연구. FedProx 알고리즘을 통해 이질적인 클라이언트 데이터에서의 학습 안정성을 개선한다.',rel:[1,2,5]},
+  ];
+  const sc=s=>s>=85?'#ff8c42':s>=70?'#ffb470':'rgba(140,160,200,0.7)';
+  const scc=s=>s>=85?'sh':s>=70?'sm':'sl';
+
+  /* background */
+  const bgC=document.getElementById('bgCanvas');
+  const bgX=bgC.getContext('2d');
+  function resizeBg(){
+    bgC.width=window.innerWidth;bgC.height=window.innerHeight;
+    drawBg();
+  }
+  function drawBg(){
+    const w=bgC.width,h=bgC.height;
+    bgX.clearRect(0,0,w,h);
+    bgX.fillStyle='#03060e';bgX.fillRect(0,0,w,h);
+    const b1=bgX.createRadialGradient(w*0.15,h*0.2,0,w*0.15,h*0.2,w*0.65);
+    b1.addColorStop(0,'rgba(18,50,170,0.28)');b1.addColorStop(1,'rgba(2,6,15,0)');
+    bgX.fillStyle=b1;bgX.fillRect(0,0,w,h);
+    const b2=bgX.createRadialGradient(w*0.85,h*0.8,0,w*0.85,h*0.8,w*0.5);
+    b2.addColorStop(0,'rgba(15,40,150,0.22)');b2.addColorStop(1,'rgba(2,6,15,0)');
+    bgX.fillStyle=b2;bgX.fillRect(0,0,w,h);
+    const o1=bgX.createRadialGradient(w*0.82,h*0.12,0,w*0.82,h*0.12,w*0.28);
+    o1.addColorStop(0,'rgba(255,100,30,0.10)');o1.addColorStop(1,'rgba(2,6,15,0)');
+    bgX.fillStyle=o1;bgX.fillRect(0,0,w,h);
+    const s1=bgX.createLinearGradient(0,0,w*0.6,h);
+    s1.addColorStop(0,'rgba(2,6,15,0)');
+    s1.addColorStop(0.45,'rgba(14,38,118,0.12)');
+    s1.addColorStop(0.55,'rgba(18,45,145,0.18)');
+    s1.addColorStop(1,'rgba(2,6,15,0)');
+    bgX.fillStyle=s1;bgX.fillRect(0,0,w,h);
+  }
+  resizeBg();
+  window.addEventListener('resize',resizeBg);
+
+  /* viz */
+  const vc=document.getElementById('vizCanvas');
+  const vctx=vc.getContext('2d');
+  const lp=document.getElementById('leftPanel');
+  let W=0,H=0;
+  function resizeV(){W=lp.offsetWidth;H=lp.offsetHeight;vc.width=W;vc.height=H;redraw();}
+
+  let _s=42;
+  const rng=()=>{_s^=_s<<13;_s^=_s>>17;_s^=_s<<5;return(_s>>>0)/4294967296;};
+  const rn=()=>Math.sqrt(-2*Math.log(rng()+1e-9))*Math.cos(2*Math.PI*rng());
+
+  let bgPts=[];
+  CL.forEach((cl,ci)=>{for(let i=0;i<200;i++){const sp=cl.r*0.32;bgPts.push({x:cl.cx+rn()*sp,y:cl.cy+rn()*sp,z:cl.cz+rn()*sp*0.7,ci,sz:1.2+rng()*1.6,a:0.2+rng()*0.35});}});
+  const pPts=PP.map((p,i)=>{const cl=CL[p.cl];const ang=(i/PP.length)*Math.PI*2;return{x:cl.cx+Math.cos(ang)*0.025,y:cl.cy+Math.sin(ang)*0.025,z:cl.cz+0.01,ci:p.cl,pi:i};});
+
+  let rotX=0.28,rotY=0.52,zoom=1.0,dragging=false,lmx=0,lmy=0,vx2=0,vy2=0,dd=0;
+  let selIdx=null,hovIdx=null,pCache=[];
+
+  function proj(x,y,z){
+    const cx=Math.cos(rotX),sx=Math.sin(rotX),cy=Math.cos(rotY),sy=Math.sin(rotY);
+    const y2=y*cx-z*sx,z2=y*sx+z*cx,x2=x*cy+z2*sy,z3=-x*sy+z2*cy;
+    const f=1.4,s=f/(f+z3+0.6);
+    return{sx:W/2+x2*W*0.65*s*zoom,sy:H/2+y2*H*0.65*s*zoom,s,z3};
+  }
+
+  function redraw(){
+    vctx.clearRect(0,0,W,H);
+    const bps=bgPts.map((p,i)=>({p,pr:proj(p.x,p.y,p.z),t:'b',i}));
+    const vps=pPts.map((p,i)=>({p,pr:proj(p.x,p.y,p.z),t:'p',i}));
+    pCache=vps;
+
+    const drawn=new Set();
+    PP.forEach((p,i)=>{
+      const sp=vps[i].pr;
+      p.rel.forEach(ri=>{
+        if(ri>=PP.length)return;
+        const key=Math.min(i,ri)+'-'+Math.max(i,ri);
+        if(drawn.has(key))return;
+        drawn.add(key);
+        const rp=vps[ri].pr;
+        const isAct=(selIdx===i||selIdx===ri);
+        const isHovE=(hovIdx===i||hovIdx===ri);
+        const g=vctx.createLinearGradient(sp.sx,sp.sy,rp.sx,rp.sy);
+        if(isAct){
+          g.addColorStop(0,CL[PP[i].cl].color+'ee');g.addColorStop(1,CL[PP[ri].cl].color+'aa');
+          vctx.lineWidth=1.5;vctx.setLineDash([]);
+        } else if(isHovE){
+          g.addColorStop(0,CL[PP[i].cl].color+'88');g.addColorStop(1,CL[PP[ri].cl].color+'55');
+          vctx.lineWidth=0.9;vctx.setLineDash([]);
+        } else {
+          g.addColorStop(0,CL[PP[i].cl].color+'99');g.addColorStop(1,CL[PP[ri].cl].color+'66');
+          vctx.lineWidth=1.0;vctx.setLineDash([]);
+        }
+        vctx.beginPath();vctx.moveTo(sp.sx,sp.sy);vctx.lineTo(rp.sx,rp.sy);
+        vctx.strokeStyle=g;vctx.stroke();vctx.setLineDash([]);
+      });
+    });
+
+    [...bps,...vps].sort((a,b)=>a.pr.z3-b.pr.z3).forEach(({p,pr,t,i})=>{
+      const cl=CL[p.ci];
+      if(t==='b'){
+        const s=Math.max(0.6,(p.sz*pr.s*Math.min(W,H))/600);
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,s,0,Math.PI*2);
+        vctx.fillStyle=cl.color+Math.round(p.a*255).toString(16).padStart(2,'0');vctx.fill();
+      } else {
+        const isSel=selIdx===i,isHov=hovIdx===i,isRel=selIdx!==null&&PP[selIdx].rel.includes(i);
+        const base=(pr.s*Math.min(W,H))/30;
+        const r=isSel?base*2.0:isHov?base*1.6:base;
+
+        const grd=vctx.createRadialGradient(pr.sx,pr.sy,0,pr.sx,pr.sy,r*3.0);
+        grd.addColorStop(0,cl.color+(isSel?'55':isHov?'33':'1a'));
+        grd.addColorStop(1,cl.color+'00');
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,r*3.0,0,Math.PI*2);vctx.fillStyle=grd;vctx.fill();
+
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,r,0,Math.PI*2);
+        vctx.fillStyle=cl.color+(isSel?'18':isHov?'12':'0a');
+        vctx.fill();
+
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,r,0,Math.PI*2);
+        vctx.strokeStyle=cl.color+(isSel?'ff':isHov?'ff':isRel?'dd':'bb');
+        vctx.lineWidth=isSel?2.8:isHov?2.2:1.6;
+        vctx.stroke();
+
+        if(isSel){
+          vctx.beginPath();vctx.arc(pr.sx,pr.sy,r+6,0,Math.PI*2);
+          vctx.strokeStyle=cl.color+'44';vctx.lineWidth=1;vctx.stroke();
+          vctx.beginPath();vctx.arc(pr.sx,pr.sy,r+11,0,Math.PI*2);
+          vctx.strokeStyle=cl.color+'1a';vctx.lineWidth=0.8;vctx.stroke();
+        }
+
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,r*0.16,0,Math.PI*2);
+        vctx.fillStyle=isSel?'#fff':cl.color;vctx.fill();
+
+        if(isHov||isSel){
+          vctx.font='500 10px "DM Sans",sans-serif';
+          vctx.fillStyle=cl.color;vctx.textAlign='center';
+          vctx.fillText(PP[i].venue+' · '+PP[i].score,pr.sx,pr.sy-r-8);
+          vctx.textAlign='left';
+        }
+      }
+    });
+  }
+
+  vc.addEventListener('wheel',e=>{
+    e.preventDefault();
+    zoom=Math.min(4,Math.max(0.3,zoom*(e.deltaY<0?1.1:0.91)));
+    redraw();
+  },{passive:false});
+
+  let lastPinchDist=null;
+  vc.addEventListener('touchstart',e=>{if(e.touches.length===2){lastPinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}},{passive:true});
+  vc.addEventListener('touchmove',e=>{
+    if(e.touches.length===2&&lastPinchDist){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      zoom=Math.min(4,Math.max(0.3,zoom*(d/lastPinchDist)));
+      lastPinchDist=d;redraw();
+    }
+  },{passive:true});
+  vc.addEventListener('touchend',()=>{lastPinchDist=null;},{passive:true});
+
+  vc.addEventListener('mousedown',e=>{dragging=true;dd=0;lmx=e.clientX;lmy=e.clientY;vx2=0;vy2=0;vc.classList.add('drag');});
+  window.addEventListener('mouseup',()=>{if(!dragging)return;dragging=false;vc.classList.remove('drag');});
+  window.addEventListener('mousemove',e=>{
+    if(dragging){
+      const dx=e.clientX-lmx,dy=e.clientY-lmy;
+      dd+=Math.abs(dx)+Math.abs(dy);vy2=dx*0.008;vx2=dy*0.008;
+      rotY+=vy2;rotX+=vx2;lmx=e.clientX;lmy=e.clientY;redraw();return;
+    }
+    const rect=vc.getBoundingClientRect();
+    const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+    let near=null,nd=28;
+    pCache.forEach(({pr,i})=>{const d=Math.hypot(pr.sx-mx,pr.sy-my);if(d<nd){nd=d;near=i;}});
+    if(near!==hovIdx){hovIdx=near;redraw();}
+    const tt=document.getElementById('tt');
+    if(near!==null){
+      document.getElementById('tt-t').textContent=PP[near].short;
+      document.getElementById('tt-m').textContent=CL[PP[near].cl].name+' · '+PP[near].venue+' '+PP[near].year;
+      tt.style.display='block';
+      tt.style.left=Math.min(mx+13,W-190)+'px';tt.style.top=Math.max(my-58,8)+'px';
+    } else tt.style.display='none';
+  });
+  vc.addEventListener('mouseleave',()=>{hovIdx=null;document.getElementById('tt').style.display='none';redraw();});
+  vc.addEventListener('click',e=>{
+    if(dd>6)return;
+    const rect=vc.getBoundingClientRect();
+    const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+    let near=null,nd=30;
+    pCache.forEach(({pr,i})=>{const d=Math.hypot(pr.sx-mx,pr.sy-my);if(d<nd){nd=d;near=i;}});
+    if(near!==null)openModal(near);
+  });
+
+  let autoRotating=true;
+  let autoResumeTimer=null;
+  vc.addEventListener('mousedown',()=>{
+    autoRotating=false;
+    if(autoResumeTimer)clearTimeout(autoResumeTimer);
+  });
+  window.addEventListener('mouseup',()=>{
+    autoResumeTimer=setTimeout(()=>{autoRotating=true;},1800);
+  });
+
+  (function loop(){
+    if(!dragging&&autoRotating){
+      rotY+=0.0018;
+      redraw();
+    } else if(!dragging&&(Math.abs(vx2)>0.0001||Math.abs(vy2)>0.0001)){
+      rotX+=vx2;rotY+=vy2;vx2*=0.92;vy2*=0.92;redraw();
+    }
+    requestAnimationFrame(loop);
+  })();
+
+  function openModal(idx){
+    selIdx=idx;redraw();
+    const p=PP[idx],cl=CL[p.cl];
+    const mTag=document.getElementById('m-tag');
+    mTag.textContent=cl.name+' · '+p.venue;
+    mTag.style.background=cl.glow;
+    mTag.style.border=`0.5px solid ${cl.color}55`;
+    mTag.style.color=cl.color;
+    document.getElementById('m-title').textContent=p.title;
+    document.getElementById('m-auth').textContent=p.auth;
+    document.getElementById('m-abs').textContent=p.abs;
+    const ms=document.getElementById('m-sc');ms.textContent=p.score;ms.style.color=sc(p.score);
+    document.getElementById('m-scb').style.cssText=`width:${p.score}%;background:#ff8c42;opacity:0.75`;
+    document.getElementById('m-ci').textContent=p.cite;
+    document.getElementById('m-yr').textContent=p.year;
+    // 요약보고서: PAPERS에서 매핑
+    const mappedPaper=PAPERS[idx%PAPERS.length];
+    document.getElementById('m-summ').innerHTML=fmtMd(mappedPaper.summ);
+    // 보고서 요약 버튼 → p3
+    document.getElementById('m-openp3').onclick=function(){
+      closeModal();
+      openPaper(mappedPaper.id);
+    };
+    document.getElementById('modalBg').classList.add('show');
+    document.querySelectorAll('.paper').forEach((el,i)=>el.classList.toggle('active',i===idx));
+  }
+  function closeModal(){
+    document.getElementById('modalBg').classList.remove('show');
+    selIdx=null;redraw();document.querySelectorAll('.paper').forEach(e=>e.classList.remove('active'));
+  }
+  document.getElementById('modalX').addEventListener('click',closeModal);
+  document.getElementById('modalBg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+
+  const pl=document.getElementById('plist');
+  PP.forEach((p,i)=>{
+    const cl=CL[p.cl];
+    const el=document.createElement('div');el.className='paper';
+    el.innerHTML=`<div class="ptop"><div class="ptitle"><span class="cdot" style="background:${cl.color}"></span>${p.title}</div><div class="pscore ${scc(p.score)}">${p.score}</div></div><div class="pmeta"><span class="ptag">${cl.name} · ${p.venue}</span><span class="pyear">${p.year}</span></div><div class="tbar"><div class="tbar-fill" style="width:${p.score}%;background:rgba(37,99,235,0.55)"></div></div>`;
+    el.addEventListener('click',()=>openModal(i));
+    pl.appendChild(el);
+  });
+
+  resizeV();
+  window.addEventListener('resize',()=>{resizeV();});
+})();
+</script>
+
+<!-- ── CHATBOT ──────────────────────────────────────────── -->
+<button id="chat-fab" onclick="toggleChat()">
+  <svg class="chat-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+  <svg class="chat-close" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+</button>
+
+<div id="chat-window">
+  <div class="chat-head">
+    <div class="chat-head-dot"></div>
+    <div>
+      <div class="chat-head-name">baggin' AI</div>
+      <div class="chat-head-sub">논문 검색 · 요약 · 비교 도우미</div>
+    </div>
+  </div>
+  <div class="chat-msgs" id="chat-msgs"></div>
+  <div class="chat-chips" id="chat-chips">
+    <button class="chat-chip" onclick="sendChip(this)">최신 논문 추천해줘</button>
+    <button class="chat-chip" onclick="sendChip(this)">NLP 논문 요약해줘</button>
+    <button class="chat-chip" onclick="sendChip(this)">논문 비교 방법 알려줘</button>
+    <button class="chat-chip" onclick="sendChip(this)">사내 비교문서 만드는 법</button>
+  </div>
+  <div class="chat-input-row">
+    <input id="chat-input" type="text" placeholder="논문에 대해 무엇이든 물어보세요…" onkeydown="if(event.key==='Enter')sendChat()">
+    <button id="chat-send" onclick="sendChat()">
+      <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const BOT_REPLIES = {
+    '최신 논문': '현재 탐색 페이지에서 최신 논문 7편을 확인할 수 있어요. NLP, 언어모델, 그래프 신경망 등 다양한 분야를 다루고 있습니다. 논문 카드를 클릭하면 요약보고서를 볼 수 있어요.',
+    'nlp': 'NLP 관련 논문으로는 Attention Is All You Need, BERT 등이 있습니다. 논문리스트 탭에서 NLP 카테고리를 확인해보세요.',
+    '요약': '논문 요약은 각 논문 카드를 클릭하면 바로 볼 수 있어요. 더 자세한 요약보고서는 "논문 보러가기" 버튼을 눌러 확인하세요.',
+    '비교': '두 논문을 비교하려면 논문리스트에서 논문을 선택 후 관련 사내 문서의 "생성하기" 버튼을 눌러 비교보고서를 만들어보세요.',
+    '사내': '사내 비교문서는 논문리스트 → 논문 선택 → 관련 사내 문서 → 생성하기 버튼 순서로 만들 수 있어요. 만들어진 문서는 "비교보고서" 탭에서 모아볼 수 있습니다.',
+    '보고서': '비교보고서는 상단 내비게이션의 "비교보고서" 탭에서 지금까지 생성한 목록을 확인할 수 있어요.',
+  };
+
+  const DEFAULT = [
+    '죄송해요, 아직 그 내용은 학습되지 않았어요. 논문 검색, 요약, 비교에 관한 질문을 해주세요!',
+    '좋은 질문이에요! 논문 탐색 페이지에서 관련 논문을 찾아보거나, 구체적인 키워드로 다시 질문해 주세요.',
+    '현재 시스템에서는 논문 요약 및 비교 기능을 지원해요. 다른 기능은 곧 업데이트 예정입니다.',
+  ];
+
+  let defIdx = 0;
+  let isOpen = false;
+  let initialized = false;
+
+  window.toggleChat = function() {
+    isOpen = !isOpen;
+    document.getElementById('chat-fab').classList.toggle('open', isOpen);
+    document.getElementById('chat-window').classList.toggle('open', isOpen);
+    if (isOpen && !initialized) {
+      initialized = true;
+      setTimeout(() => addBotMsg('안녕하세요! 👋 baggin\' AI입니다.\n논문 검색, 요약, 비교 분석을 도와드릴게요. 무엇이 궁금하신가요?'), 200);
+    }
+    if (isOpen) setTimeout(() => document.getElementById('chat-input').focus(), 250);
+  };
+
+  window.sendChip = function(el) {
+    const txt = el.textContent;
+    addUserMsg(txt);
+    document.getElementById('chat-chips').style.display = 'none';
+    showTyping(() => addBotMsg(getBotReply(txt)));
+  };
+
+  window.sendChat = function() {
+    const inp = document.getElementById('chat-input');
+    const txt = inp.value.trim();
+    if (!txt) return;
+    inp.value = '';
+    addUserMsg(txt);
+    showTyping(() => addBotMsg(getBotReply(txt)));
+  };
+
+  function getBotReply(txt) {
+    const lower = txt.toLowerCase();
+    for (const [key, reply] of Object.entries(BOT_REPLIES)) {
+      if (lower.includes(key)) return reply;
+    }
+    const r = DEFAULT[defIdx % DEFAULT.length];
+    defIdx++;
+    return r;
+  }
+
+  function addUserMsg(txt) {
+    const el = document.createElement('div');
+    el.className = 'chat-bubble user';
+    el.textContent = txt;
+    document.getElementById('chat-msgs').appendChild(el);
+    scrollBottom();
+  }
+
+  function addBotMsg(txt) {
+    // remove typing if exists
+    const t = document.getElementById('chat-typing');
+    if (t) t.remove();
+    const el = document.createElement('div');
+    el.className = 'chat-bubble bot';
+    el.textContent = txt;
+    document.getElementById('chat-msgs').appendChild(el);
+    scrollBottom();
+  }
+
+  function showTyping(cb) {
+    const el = document.createElement('div');
+    el.className = 'chat-bubble bot typing';
+    el.id = 'chat-typing';
+    el.innerHTML = '<span></span><span></span><span></span>';
+    document.getElementById('chat-msgs').appendChild(el);
+    scrollBottom();
+    setTimeout(cb, 900);
+  }
+
+  function scrollBottom() {
+    const m = document.getElementById('chat-msgs');
+    m.scrollTop = m.scrollHeight;
+  }
+})();
+</script>
+</body>
+</html>

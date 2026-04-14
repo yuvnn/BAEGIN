@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beagin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg:#03060e;
+    --blue:#2563eb;
+    --orange:#ff7a2f;
+    --orange2:#ff9a55;
+    --border:rgba(37,99,235,0.2);
+    --border-o:rgba(255,122,47,0.3);
+    --text:rgba(210,220,245,0.92);
+    --text2:rgba(148,164,208,0.6);
+    --text3:rgba(90,115,172,0.45);
+  }
+  html,body{height:100%;background:var(--bg);overflow:hidden;}
+  .root{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+  #bgCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;}
+
+  /* topbar */
+  .topbar{position:relative;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:none;background:rgba(2,6,15,0.55);backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);flex-shrink:0;box-shadow:0 1px 0 rgba(37,99,235,0.07);}
+  .logo{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.05em;color:#ffffff;}
+  .logo span{color:rgba(255,255,255,0.6);}
+  .tabs{display:flex;gap:4px;}
+  .tab{font-size:12px;padding:6px 20px;border-radius:0;border:none;background:transparent;color:rgba(140,160,220,0.45);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .22s;letter-spacing:0.01em;}
+  .tab.active{color:#dde5ff;font-weight:500;}
+  .tab:hover:not(.active){color:rgba(190,205,255,0.7);}
+  .searchbox{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,0.05);border:none;border-radius:20px;padding:6px 15px;font-size:11px;color:var(--text2);backdrop-filter:blur(12px);}
+  .mypage-btn{width:32px;height:32px;border-radius:50%;background:rgba(37,99,235,0.18);border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .2s;margin-left:6px;}
+  .mypage-btn:hover{background:rgba(37,99,235,0.3);}
+  .mypage-btn svg{width:16px;height:16px;opacity:0.75;}
+
+  /* body */
+  .body{position:relative;z-index:10;display:grid;grid-template-columns:1fr 300px;flex:1;min-height:0;}
+  .left{position:relative;overflow:hidden;}
+  #vizCanvas{display:block;cursor:grab;width:100%;height:100%;}
+  #vizCanvas.drag{cursor:grabbing;}
+  .viz-info{position:absolute;top:14px;left:14px;font-size:10px;color:rgba(120,150,220,0.4);background:rgba(2,6,15,0.42);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border:none;border-radius:12px;padding:8px 14px;z-index:5;pointer-events:none;}
+  .legend{position:absolute;bottom:18px;left:16px;display:flex;flex-direction:column;gap:6px;background:rgba(4,10,28,0.48);backdrop-filter:blur(36px) saturate(150%);-webkit-backdrop-filter:blur(36px) saturate(150%);border:none;border-radius:16px;padding:14px 16px;z-index:5;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,20,0.3);}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:10px;color:rgba(160,180,240,0.6);}
+  .legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .tt{position:absolute;background:rgba(4,10,28,0.62);backdrop-filter:blur(36px);-webkit-backdrop-filter:blur(36px);border:none;border-radius:14px;padding:10px 14px;font-size:11px;pointer-events:none;display:none;z-index:30;max-width:185px;box-shadow:0 8px 32px rgba(0,0,20,0.35);}
+  .tt-title{font-weight:500;color:#d0daff;margin-bottom:2px;line-height:1.4;}
+  .tt-meta{color:var(--text2);font-size:10px;}
+
+  /* modal */
+  .modal-bg{position:absolute;inset:0;background:rgba(0,2,10,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:50;display:none;align-items:flex-start;justify-content:center;padding-top:32px;}
+  .modal-bg.show{display:flex;}
+  .modal{background:rgba(4,10,32,0.78);backdrop-filter:blur(48px) saturate(180%);-webkit-backdrop-filter:blur(48px) saturate(180%);border:none;border-radius:24px;width:470px;max-width:92%;padding:28px 28px;position:relative;animation:mIn .22s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 24px 60px rgba(0,0,20,0.55),inset 0 1px 0 rgba(255,255,255,0.07);}
+  @keyframes mIn{from{opacity:0;transform:translateY(16px) scale(0.95);}to{opacity:1;transform:none;}}
+  .modal-x{position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.07);border:none;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(160,180,240,0.7);font-size:14px;line-height:1;transition:background .2s;}
+  .modal-x:hover{background:rgba(255,255,255,0.13);}
+  .modal-tag{display:inline-flex;align-items:center;font-size:10px;padding:5px 12px;border-radius:20px;margin-bottom:12px;background:rgba(37,99,235,0.18);color:rgba(180,200,255,0.8);border:none;}
+  .modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#dde5ff;margin-bottom:8px;line-height:1.45;}
+  .modal-authors{font-size:11px;color:rgba(130,155,220,0.65);margin-bottom:14px;}
+  .modal-abstract{font-size:11px;color:rgba(160,180,240,0.7);line-height:1.8;margin-bottom:16px;border-left:2px solid rgba(37,99,235,0.35);padding-left:14px;}
+  .modal-row{display:flex;gap:10px;margin-bottom:16px;}
+  .modal-stat{flex:1;background:rgba(37,99,235,0.1);border:none;border-radius:14px;padding:12px 14px;}
+  .modal-stat-label{font-size:9px;color:rgba(110,140,210,0.5);letter-spacing:.08em;margin-bottom:5px;}
+  .modal-stat-value{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
+  .mbar{height:3px;border-radius:2px;background:rgba(37,99,235,0.12);margin-top:7px;overflow:hidden;}
+  .mbar-fill{height:100%;border-radius:2px;}
+  .modal-actions{display:flex;gap:9px;}
+  .mbtn{flex:1;padding:12px;border-radius:14px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;background:rgba(37,99,235,0.24);color:rgba(190,210,255,0.9);transition:all .2s;}
+  .mbtn:hover{background:rgba(37,99,235,0.38);}
+  .mbtn.sec{background:rgba(255,255,255,0.06);color:rgba(150,170,230,0.7);}
+  .mbtn.sec:hover{background:rgba(255,255,255,0.1);}
+  .modal-rel{margin-bottom:16px;}
+  .modal-rel-title{font-size:10px;color:rgba(110,140,210,0.5);letter-spacing:.08em;margin-bottom:8px;}
+  .modal-rel-list{display:flex;flex-direction:column;gap:5px;}
+  .modal-rel-item{font-size:10px;color:rgba(150,170,240,0.65);background:rgba(37,99,235,0.08);border:none;border-radius:10px;padding:8px 12px;cursor:pointer;transition:all .18s;}
+  .modal-rel-item:hover{background:rgba(37,99,235,0.18);color:#c8d4ff;}
+
+  /* right — iOS 26 Liquid Glass */
+  .right{
+    position:relative;
+    border-left:none;
+    background:rgba(255,255,255,0.04);
+    backdrop-filter:blur(60px) saturate(200%) brightness(1.08);
+    -webkit-backdrop-filter:blur(60px) saturate(200%) brightness(1.08);
+    display:flex;flex-direction:column;padding:22px 18px;gap:12px;overflow:hidden;
+  }
+  /* inner top highlight — glass refraction */
+  .right::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.18),rgba(255,255,255,0));
+    pointer-events:none;z-index:1;
+  }
+  /* left edge specular */
+  .right::after{
+    content:'';position:absolute;top:0;left:0;bottom:0;width:1px;
+    background:linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04),rgba(255,255,255,0));
+    pointer-events:none;z-index:1;
+  }
+  .sec-title{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(180,200,255,0.4);position:relative;z-index:2;}
+  .badge{font-size:10px;padding:4px 12px;border-radius:20px;background:rgba(255,255,255,0.1);backdrop-filter:blur(16px);border:none;color:rgba(200,218,255,0.75);position:relative;z-index:2;}
+  .plist{display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;scrollbar-width:none;padding-right:0;position:relative;z-index:2;}
+  .plist::-webkit-scrollbar{display:none;}
+  .paper{
+    background:rgba(255,255,255,0.06);
+    border:none;
+    border-radius:18px;
+    padding:15px 16px;
+    cursor:pointer;
+    transition:all .22s;
+    position:relative;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.12), 0 2px 12px rgba(0,0,20,0.18);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+  }
+  .paper::after{display:none;}
+  .paper:last-of-type::after{display:none;}
+  .paper:hover{background:rgba(255,255,255,0.1);box-shadow:inset 0 1px 0 rgba(255,255,255,0.18),0 4px 20px rgba(0,0,30,0.22);}
+  .paper.active{background:rgba(37,99,235,0.18);box-shadow:inset 0 1px 0 rgba(255,255,255,0.16),0 4px 20px rgba(10,30,180,0.25);}
+  .paper.active::before{display:none;}
+  .ptop{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px;}
+  .ptitle{font-size:11.5px;font-weight:500;color:rgba(220,230,255,0.9);line-height:1.45;flex:1;}
+  .pscore{
+    font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;
+    white-space:nowrap;flex-shrink:0;
+    background:rgba(255,255,255,0.1);
+    backdrop-filter:blur(12px);
+    color:rgba(210,225,255,0.9);border:none;
+  }
+  .sh{background:rgba(255,255,255,0.13);color:rgba(220,235,255,0.95);}
+  .sm{background:rgba(255,255,255,0.09);color:rgba(195,215,255,0.85);}
+  .sl{background:rgba(255,255,255,0.06);color:rgba(160,180,230,0.7);}
+  .pmeta{display:flex;align-items:center;gap:8px;margin-top:4px;}
+  .ptag{font-size:9.5px;color:rgba(150,170,230,0.45);}
+  .pyear{font-size:9.5px;padding:2px 9px;border-radius:20px;background:rgba(255,255,255,0.07);color:rgba(170,190,255,0.65);border:none;}
+  .cdot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+  .tbar{height:1.5px;border-radius:2px;background:rgba(255,255,255,0.07);margin-top:8px;overflow:hidden;}
+  .tbar-fill{height:100%;border-radius:2px;}
+  .paper-divider{display:none;}
+  .gen-btn{
+    width:100%;padding:13px;border-radius:16px;border:none;
+    background:rgba(255,255,255,0.09);
+    backdrop-filter:blur(20px);
+    color:rgba(200,218,255,0.82);font-size:11px;cursor:pointer;
+    font-family:'DM Sans',sans-serif;transition:all .2s;
+    letter-spacing:0.02em;position:relative;z-index:2;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+  .gen-btn:hover{background:rgba(255,255,255,0.15);}
+</style>
+</head>
+<body>
+<div class="root" id="root">
+  <canvas id="bgCanvas"></canvas>
+
+  <div class="topbar">
+    <div class="logo">Bea<span>gin</span></div>
+    <div class="tabs">
+      <button class="tab active">탐색</button>
+      <button class="tab">신뢰 평가</button>
+      <button class="tab">보고서</button>
+      <button class="tab">아카이브</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="searchbox">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg>
+        논문 검색...
+      </div>
+      <button class="mypage-btn" title="마이페이지">
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(190,210,255,0.8)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"/>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="left" id="leftPanel">
+      <canvas id="vizCanvas"></canvas>
+      <div class="viz-info">드래그로 회전 · 스크롤로 확대/축소 · 클릭으로 논문 선택</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>NLP · 언어모델</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff7a2f"></div>AI · 기계학습</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>이상탐지</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff9a55"></div>컴퓨터비전</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#1e4fba"></div>추천시스템</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ffb870"></div>멀티에이전트</div>
+      </div>
+      <div class="tt" id="tt"><div class="tt-title" id="tt-t"></div><div class="tt-meta" id="tt-m"></div></div>
+
+      <div class="modal-bg" id="modalBg">
+        <div class="modal">
+          <div class="modal-x" id="modalX">×</div>
+          <div class="modal-tag" id="m-tag"></div>
+          <div class="modal-title" id="m-title"></div>
+          <div class="modal-authors" id="m-auth"></div>
+          <div class="modal-abstract" id="m-abs"></div>
+          <div class="modal-row">
+            <div class="modal-stat"><div class="modal-stat-label">신뢰도</div><div class="modal-stat-value" id="m-sc"></div><div class="mbar"><div class="mbar-fill" id="m-scb"></div></div></div>
+            <div class="modal-stat"><div class="modal-stat-label">인용 수</div><div class="modal-stat-value" id="m-ci" style="color:#c8d4ff"></div></div>
+            <div class="modal-stat"><div class="modal-stat-label">출판연도</div><div class="modal-stat-value" id="m-yr" style="color:#c8d4ff"></div></div>
+          </div>
+          <div class="modal-rel"><div class="modal-rel-title">연관 논문</div><div class="modal-rel-list" id="m-rel"></div></div>
+          <div class="modal-actions">
+            <button class="mbtn">보고서 생성 ↗</button>
+            <button class="mbtn sec">원문 보기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="sec-title">최신 논문</div>
+        <div class="badge">실시간</div>
+      </div>
+      <div class="plist" id="plist"></div>
+      <button class="gen-btn">조사 보고서 생성 ↗</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CL=[
+    {name:'NLP · 언어모델', color:'#3b82f6', glow:'rgba(37,99,235,0.32)', cx:0.08,  cy:-0.22,cz:0.05, r:0.19},
+    {name:'AI · 기계학습',  color:'#ff7a2f', glow:'rgba(255,100,30,0.28)',cx:-0.05, cy:0.1,  cz:-0.18,r:0.21},
+    {name:'이상탐지',        color:'#ef4444', glow:'rgba(220,38,38,0.30)', cx:0.22,  cy:0.14, cz:0.12, r:0.14},
+    {name:'컴퓨터비전',      color:'#ff9a55', glow:'rgba(255,130,50,0.25)',cx:-0.2,  cy:-0.08,cz:0.2,  r:0.17},
+    {name:'추천시스템',      color:'#1e4fba', glow:'rgba(25,65,180,0.28)', cx:0.18,  cy:-0.05,cz:-0.2, r:0.15},
+    {name:'멀티에이전트',    color:'#ffb870', glow:'rgba(255,160,80,0.22)',cx:-0.1,  cy:0.25, cz:0.1,  r:0.12},
+  ];
+  const PP=[
+    {title:'Scaling Laws for Neural Language Models in Multilingual Settings',short:'Scaling Laws for Neural LMs',cl:0,score:98,cite:312,year:2025,venue:'arXiv',auth:'Kaplan J., McCandlish S., Henighan T. et al.',abs:'다국어 환경에서 언어 모델의 스케일링 법칙을 체계적으로 분석한 연구. 파라미터 수, 데이터 크기, 컴퓨팅 예산의 관계를 정량적으로 규명하며, 최적의 모델 크기 예측 공식을 제시한다.',rel:[1,3,4]},
+    {title:'GraphRAG: Knowledge Graph-Augmented Retrieval for Complex QA',short:'GraphRAG: KG-Augmented Retrieval',cl:0,score:91,cite:187,year:2025,venue:'IEEE',auth:'Edge D., Trinh H., Cheng N. et al.',abs:'지식 그래프를 활용하여 RAG 시스템의 복잡한 질의응답 성능을 향상시키는 방법론. 엔티티 관계 추론을 통해 단순 벡터 검색의 한계를 극복한다.',rel:[0,4,6]},
+    {title:'Anomaly Detection in Time-Series via Diffusion Models',short:'Anomaly Detection via Diffusion',cl:2,score:87,cite:143,year:2025,venue:'NeurIPS',auth:'Park S., Kim J., Lee H. et al.',abs:'확산 모델을 시계열 이상 탐지에 적용한 연구. 재구성 오차 기반의 이상 점수를 정의하고, 다양한 산업 데이터셋에서 SOTA 성능을 달성한다.',rel:[3,5,6]},
+    {title:'Efficient Fine-tuning of LLMs with LoRA Variants',short:'Efficient Fine-tuning: LoRA Variants',cl:1,score:73,cite:98,year:2024,venue:'ICML',auth:'Hu E., Shen Y., Wallis P. et al.',abs:'LoRA의 변형 기법들을 체계적으로 비교 분석한 연구. AdaLoRA, QLoRA 등 다양한 변형의 효율성과 성능 트레이드오프를 실험적으로 규명한다.',rel:[0,1,4]},
+    {title:'Multi-Agent Debate for Factual Consistency in Generation',short:'Multi-Agent Debate',cl:5,score:89,cite:201,year:2025,venue:'ACL',auth:'Du Y., Li S., Torralba A. et al.',abs:'여러 LLM 에이전트가 토론을 통해 사실 일관성을 높이는 프레임워크. 단일 모델 대비 환각 발생률을 40% 감소시키는 결과를 보인다.',rel:[0,1,3]},
+    {title:'Vision-Language Alignment without Human Annotations',short:'Vision-Language Alignment',cl:3,score:68,cite:76,year:2024,venue:'CVPR',auth:'Radford A., Kim J., Hallacy C. et al.',abs:'인간 레이블 없이 웹 크롤링 데이터만으로 비전-언어 정렬을 달성하는 방법론. 자기지도 학습 목표 함수를 통해 멀티모달 표현 학습을 수행한다.',rel:[2,3,6]},
+    {title:'Federated Learning under Non-IID Data Distribution',short:'Federated Learning Non-IID',cl:4,score:52,cite:44,year:2024,venue:'AAAI',auth:'Li T., Sahu A., Zaheer M. et al.',abs:'비독립동일분포(Non-IID) 데이터 환경에서 연합 학습의 수렴 문제를 다룬 연구. FedProx 알고리즘을 통해 이질적인 클라이언트 데이터에서의 학습 안정성을 개선한다.',rel:[1,2,5]},
+  ];
+  const sc=s=>s>=85?'#ff8c42':s>=70?'#ffb470':'rgba(140,160,200,0.7)';
+  const scc=s=>s>=85?'sh':s>=70?'sm':'sl';
+
+  /* background */
+  const bgC=document.getElementById('bgCanvas');
+  const bgX=bgC.getContext('2d');
+  function resizeBg(){
+    bgC.width=window.innerWidth;bgC.height=window.innerHeight;
+    drawBg();
+  }
+  function drawBg(){
+    const w=bgC.width,h=bgC.height;
+    bgX.clearRect(0,0,w,h);
+    // deep dark base
+    bgX.fillStyle='#03060e';bgX.fillRect(0,0,w,h);
+
+    // deep blue sweep top-left
+    const b1=bgX.createRadialGradient(w*0.15,h*0.2,0,w*0.15,h*0.2,w*0.65);
+    b1.addColorStop(0,'rgba(18,50,170,0.28)');b1.addColorStop(1,'rgba(2,6,15,0)');
+    bgX.fillStyle=b1;bgX.fillRect(0,0,w,h);
+
+    // deep blue bottom-right
+    const b2=bgX.createRadialGradient(w*0.85,h*0.8,0,w*0.85,h*0.8,w*0.5);
+    b2.addColorStop(0,'rgba(15,40,150,0.22)');b2.addColorStop(1,'rgba(2,6,15,0)');
+    bgX.fillStyle=b2;bgX.fillRect(0,0,w,h);
+
+    // subtle orange glow top-right accent
+    const o1=bgX.createRadialGradient(w*0.82,h*0.12,0,w*0.82,h*0.12,w*0.28);
+    o1.addColorStop(0,'rgba(255,100,30,0.10)');o1.addColorStop(1,'rgba(2,6,15,0)');
+    bgX.fillStyle=o1;bgX.fillRect(0,0,w,h);
+
+    // diagonal dark indigo band
+    const s1=bgX.createLinearGradient(0,0,w*0.6,h);
+    s1.addColorStop(0,'rgba(2,6,15,0)');
+    s1.addColorStop(0.45,'rgba(14,38,118,0.12)');
+    s1.addColorStop(0.55,'rgba(18,45,145,0.18)');
+    s1.addColorStop(1,'rgba(2,6,15,0)');
+    bgX.fillStyle=s1;bgX.fillRect(0,0,w,h);
+  }
+  resizeBg();
+  window.addEventListener('resize',resizeBg);
+
+  /* viz */
+  const vc=document.getElementById('vizCanvas');
+  const vctx=vc.getContext('2d');
+  const lp=document.getElementById('leftPanel');
+  let W=0,H=0;
+  function resizeV(){W=lp.offsetWidth;H=lp.offsetHeight;vc.width=W;vc.height=H;redraw();}
+
+  let _s=42;
+  const rng=()=>{_s^=_s<<13;_s^=_s>>17;_s^=_s<<5;return(_s>>>0)/4294967296;};
+  const rn=()=>Math.sqrt(-2*Math.log(rng()+1e-9))*Math.cos(2*Math.PI*rng());
+
+  let bgPts=[];
+  CL.forEach((cl,ci)=>{for(let i=0;i<200;i++){const sp=cl.r*0.32;bgPts.push({x:cl.cx+rn()*sp,y:cl.cy+rn()*sp,z:cl.cz+rn()*sp*0.7,ci,sz:1.2+rng()*1.6,a:0.2+rng()*0.35});}});
+  const pPts=PP.map((p,i)=>{const cl=CL[p.cl];const ang=(i/PP.length)*Math.PI*2;return{x:cl.cx+Math.cos(ang)*0.025,y:cl.cy+Math.sin(ang)*0.025,z:cl.cz+0.01,ci:p.cl,pi:i};});
+
+  let rotX=0.28,rotY=0.52,zoom=1.0,dragging=false,lmx=0,lmy=0,vx2=0,vy2=0,dd=0;
+  let selIdx=null,hovIdx=null,pCache=[];
+
+  function proj(x,y,z){
+    const cx=Math.cos(rotX),sx=Math.sin(rotX),cy=Math.cos(rotY),sy=Math.sin(rotY);
+    const y2=y*cx-z*sx,z2=y*sx+z*cx,x2=x*cy+z2*sy,z3=-x*sy+z2*cy;
+    const f=1.4,s=f/(f+z3+0.6);
+    return{sx:W/2+x2*W*0.65*s*zoom,sy:H/2+y2*H*0.65*s*zoom,s,z3};
+  }
+
+  function redraw(){
+    vctx.clearRect(0,0,W,H);
+    const bps=bgPts.map((p,i)=>({p,pr:proj(p.x,p.y,p.z),t:'b',i}));
+    const vps=pPts.map((p,i)=>({p,pr:proj(p.x,p.y,p.z),t:'p',i}));
+    pCache=vps;
+
+    // always-on edges between all related pairs
+    const drawn=new Set();
+    PP.forEach((p,i)=>{
+      const sp=vps[i].pr;
+      p.rel.forEach(ri=>{
+        if(ri>=PP.length)return;
+        const key=Math.min(i,ri)+'-'+Math.max(i,ri);
+        if(drawn.has(key))return;
+        drawn.add(key);
+        const rp=vps[ri].pr;
+        const isAct=(selIdx===i||selIdx===ri);
+        const isHovE=(hovIdx===i||hovIdx===ri);
+        const g=vctx.createLinearGradient(sp.sx,sp.sy,rp.sx,rp.sy);
+        if(isAct){
+          g.addColorStop(0,CL[PP[i].cl].color+'ee');g.addColorStop(1,CL[PP[ri].cl].color+'aa');
+          vctx.lineWidth=1.5;vctx.setLineDash([]);
+        } else if(isHovE){
+          g.addColorStop(0,CL[PP[i].cl].color+'88');g.addColorStop(1,CL[PP[ri].cl].color+'55');
+          vctx.lineWidth=0.9;vctx.setLineDash([]);
+        } else {
+          g.addColorStop(0,CL[PP[i].cl].color+'99');g.addColorStop(1,CL[PP[ri].cl].color+'66');
+          vctx.lineWidth=1.0;vctx.setLineDash([]);
+        }
+        vctx.beginPath();vctx.moveTo(sp.sx,sp.sy);vctx.lineTo(rp.sx,rp.sy);
+        vctx.strokeStyle=g;vctx.stroke();vctx.setLineDash([]);
+      });
+    });
+
+    [...bps,...vps].sort((a,b)=>a.pr.z3-b.pr.z3).forEach(({p,pr,t,i})=>{
+      const cl=CL[p.ci];
+      if(t==='b'){
+        const s=Math.max(0.6,(p.sz*pr.s*Math.min(W,H))/600);
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,s,0,Math.PI*2);
+        vctx.fillStyle=cl.color+Math.round(p.a*255).toString(16).padStart(2,'0');vctx.fill();
+      } else {
+        const isSel=selIdx===i,isHov=hovIdx===i,isRel=selIdx!==null&&PP[selIdx].rel.includes(i);
+        const base=(pr.s*Math.min(W,H))/30;
+        const r=isSel?base*2.0:isHov?base*1.6:base;
+
+        // glow
+        const grd=vctx.createRadialGradient(pr.sx,pr.sy,0,pr.sx,pr.sy,r*3.0);
+        grd.addColorStop(0,cl.color+(isSel?'55':isHov?'33':'1a'));
+        grd.addColorStop(1,cl.color+'00');
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,r*3.0,0,Math.PI*2);vctx.fillStyle=grd;vctx.fill();
+
+        // transparent fill (outline-only look)
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,r,0,Math.PI*2);
+        vctx.fillStyle=cl.color+(isSel?'18':isHov?'12':'0a');
+        vctx.fill();
+
+        // outline stroke — bold, clear
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,r,0,Math.PI*2);
+        vctx.strokeStyle=cl.color+(isSel?'ff':isHov?'ff':isRel?'dd':'bb');
+        vctx.lineWidth=isSel?2.8:isHov?2.2:1.6;
+        vctx.stroke();
+
+        // outer pulse ring on select
+        if(isSel){
+          vctx.beginPath();vctx.arc(pr.sx,pr.sy,r+6,0,Math.PI*2);
+          vctx.strokeStyle=cl.color+'44';vctx.lineWidth=1;vctx.stroke();
+          vctx.beginPath();vctx.arc(pr.sx,pr.sy,r+11,0,Math.PI*2);
+          vctx.strokeStyle=cl.color+'1a';vctx.lineWidth=0.8;vctx.stroke();
+        }
+
+        // center dot
+        vctx.beginPath();vctx.arc(pr.sx,pr.sy,r*0.16,0,Math.PI*2);
+        vctx.fillStyle=isSel?'#fff':cl.color;vctx.fill();
+
+        // label
+        if(isHov||isSel){
+          vctx.font='500 10px "DM Sans",sans-serif';
+          vctx.fillStyle=cl.color;vctx.textAlign='center';
+          vctx.fillText(PP[i].venue+' · '+PP[i].score,pr.sx,pr.sy-r-8);
+          vctx.textAlign='left';
+        }
+      }
+    });
+  }
+
+  // wheel zoom
+  vc.addEventListener('wheel',e=>{
+    e.preventDefault();
+    zoom=Math.min(4,Math.max(0.3,zoom*(e.deltaY<0?1.1:0.91)));
+    redraw();
+  },{passive:false});
+
+  // pinch zoom (touch)
+  let lastPinchDist=null;
+  vc.addEventListener('touchstart',e=>{if(e.touches.length===2){lastPinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}},{passive:true});
+  vc.addEventListener('touchmove',e=>{
+    if(e.touches.length===2&&lastPinchDist){
+      const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+      zoom=Math.min(4,Math.max(0.3,zoom*(d/lastPinchDist)));
+      lastPinchDist=d;redraw();
+    }
+  },{passive:true});
+  vc.addEventListener('touchend',()=>{lastPinchDist=null;},{passive:true});
+
+  vc.addEventListener('mousedown',e=>{dragging=true;dd=0;lmx=e.clientX;lmy=e.clientY;vx2=0;vy2=0;vc.classList.add('drag');});
+  window.addEventListener('mouseup',()=>{if(!dragging)return;dragging=false;vc.classList.remove('drag');});
+  window.addEventListener('mousemove',e=>{
+    if(dragging){
+      const dx=e.clientX-lmx,dy=e.clientY-lmy;
+      dd+=Math.abs(dx)+Math.abs(dy);vy2=dx*0.008;vx2=dy*0.008;
+      rotY+=vy2;rotX+=vx2;lmx=e.clientX;lmy=e.clientY;redraw();return;
+    }
+    const rect=vc.getBoundingClientRect();
+    const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+    let near=null,nd=28;
+    pCache.forEach(({pr,i})=>{const d=Math.hypot(pr.sx-mx,pr.sy-my);if(d<nd){nd=d;near=i;}});
+    if(near!==hovIdx){hovIdx=near;redraw();}
+    const tt=document.getElementById('tt');
+    if(near!==null){
+      document.getElementById('tt-t').textContent=PP[near].short;
+      document.getElementById('tt-m').textContent=CL[PP[near].cl].name+' · '+PP[near].venue+' '+PP[near].year;
+      tt.style.display='block';
+      tt.style.left=Math.min(mx+13,W-190)+'px';tt.style.top=Math.max(my-58,8)+'px';
+    } else tt.style.display='none';
+  });
+  vc.addEventListener('mouseleave',()=>{hovIdx=null;document.getElementById('tt').style.display='none';redraw();});
+  vc.addEventListener('click',e=>{
+    if(dd>6)return;
+    const rect=vc.getBoundingClientRect();
+    const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+    let near=null,nd=30;
+    pCache.forEach(({pr,i})=>{const d=Math.hypot(pr.sx-mx,pr.sy-my);if(d<nd){nd=d;near=i;}});
+    if(near!==null)openModal(near);
+  });
+  let autoRotating = true;
+  let autoResumeTimer = null;
+
+  vc.addEventListener('mousedown', ()=>{
+    autoRotating = false;
+    if(autoResumeTimer) clearTimeout(autoResumeTimer);
+  });
+  window.addEventListener('mouseup', ()=>{
+    autoResumeTimer = setTimeout(()=>{ autoRotating = true; }, 1800);
+  });
+
+  (function loop(){
+    if(!dragging && autoRotating){
+      rotY += 0.0018;
+      redraw();
+    } else if(!dragging&&(Math.abs(vx2)>0.0001||Math.abs(vy2)>0.0001)){
+      rotX+=vx2;rotY+=vy2;vx2*=0.92;vy2*=0.92;redraw();
+    }
+    requestAnimationFrame(loop);
+  })();
+
+  function openModal(idx){
+    selIdx=idx;redraw();
+    const p=PP[idx],cl=CL[p.cl];
+    document.getElementById('m-tag').textContent=cl.name+' · '+p.venue;
+    document.getElementById('m-tag').style.cssText=`background:${cl.glow};border:0.5px solid ${cl.color}55;color:${cl.color};`;
+    document.getElementById('m-title').textContent=p.title;
+    document.getElementById('m-auth').textContent=p.auth;
+    document.getElementById('m-abs').textContent=p.abs;
+    const ms=document.getElementById('m-sc');ms.textContent=p.score;ms.style.color=sc(p.score);
+    document.getElementById('m-scb').style.cssText=`width:${p.score}%;background:#ff8c42;opacity:0.75`;
+    document.getElementById('m-ci').textContent=p.cite;
+    document.getElementById('m-yr').textContent=p.year;
+    const rl=document.getElementById('m-rel');rl.innerHTML='';
+    p.rel.forEach(ri=>{const d=document.createElement('div');d.className='modal-rel-item';d.textContent='↗ '+PP[ri].short;d.onclick=()=>openModal(ri);rl.appendChild(d);});
+    document.getElementById('modalBg').classList.add('show');
+    document.querySelectorAll('.paper').forEach((el,i)=>el.classList.toggle('active',i===idx));
+  }
+  function closeModal(){
+    document.getElementById('modalBg').classList.remove('show');
+    selIdx=null;redraw();document.querySelectorAll('.paper').forEach(e=>e.classList.remove('active'));
+  }
+  document.getElementById('modalX').addEventListener('click',closeModal);
+  document.getElementById('modalBg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+
+  const pl=document.getElementById('plist');
+  PP.forEach((p,i)=>{
+    const cl=CL[p.cl];
+    const el=document.createElement('div');el.className='paper';
+    el.innerHTML=`<div class="ptop"><div class="ptitle"><span class="cdot" style="background:${cl.color}"></span>${p.title}</div><div class="pscore ${scc(p.score)}">${p.score}</div></div><div class="pmeta"><span class="ptag">${cl.name} · ${p.venue}</span><span class="pyear">${p.year}</span></div><div class="tbar"><div class="tbar-fill" style="width:${p.score}%;background:rgba(37,99,235,0.55)"></div></div>`;
+    el.addEventListener('click',()=>openModal(i));
+    pl.appendChild(el);
+    if(i<PP.length-1){
+      const div=document.createElement('div');div.className='paper-divider';pl.appendChild(div);
+    }
+  });
+
+  resizeV();
+  window.addEventListener('resize',()=>{resizeV();});
+})();
+</script>
+</body>
+</html>

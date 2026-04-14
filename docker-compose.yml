@@ -20,7 +20,7 @@ services:
       eureka-server:
         condition: service_healthy
 
-vue-project:
+  vue-project:
     build: ./vue-project
     ports:
       - "15173:80"

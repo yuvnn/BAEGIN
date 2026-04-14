@@ -169,7 +169,14 @@ class AnalysisAgent:
                 source_text=chunk.document,
                 text_quote=quote if quote else None,
                 anchor=f"int_req_{idx}",
-                metadata={"doc_id": chunk.metadata.doc_id, "chunk_index": chunk.metadata.chunk_index},
+                metadata={
+                    "doc_id": chunk.metadata.doc_id,
+                    "chunk_index": chunk.metadata.chunk_index,
+                    "source_file": chunk.metadata.source_file,
+                    "source_ext": chunk.metadata.source_ext,
+                    "page_no": chunk.metadata.page_no,
+                    "title": chunk.metadata.title,
+                },
             )
             citations.append(citation)
             requirements.append(
@@ -217,7 +224,11 @@ class AnalysisAgent:
                 source_text=paper_summary.summary_md,
                 text_quote=best_sentence if best_sentence else None,
                 anchor=f"paper_tech_{idx}",
-                metadata={"title": paper_summary.title},
+                metadata={
+                    "title": paper_summary.title,
+                    "paper_url": paper_summary.paper_url,
+                    "category": paper_summary.category,
+                },
             )
             paper_citations.append(paper_citation)
             paper_technologies.append(

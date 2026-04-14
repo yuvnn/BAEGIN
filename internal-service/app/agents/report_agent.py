@@ -17,17 +17,6 @@ class ReportDraft(BaseModel):
     citations: list[Citation] = Field(default_factory=list)
 
 
-DUMMY_PAPER_SUMMARY = "\n".join(
-    [
-        "컨텍스트 관리의 병목을 해결하는 장기 과업용 프레임워크를 제안한다.",
-        "AgentSwing은 병렬 분기와 룩어헤드 라우팅으로 다음 경로를 선택한다.",
-        "검색 효율성과 최종 정밀도를 함께 높이는 적응형 접근을 다룬다.",
-        "정적 방법보다 적은 상호작용 턴으로 동등 이상 성능을 달성한다.",
-        "장기 지평 웹 에이전트의 성능 상한을 높이는 실증 결과를 제시한다.",
-    ]
-)
-
-
 class ReportAgent:
     def __init__(
         self,
@@ -54,7 +43,8 @@ class ReportAgent:
             self.chain = None
 
     def _fallback_report(self, analysis: AnalysisResult) -> ReportDraft:
-        paper_summary_text = DUMMY_PAPER_SUMMARY
+        paper_lines = [item.technology_text for item in analysis.paper_technologies[:5]]
+        paper_summary_text = "\n".join(paper_lines) if paper_lines else "논문 기술 데이터 없음"
 
         internal_requirements = [r.requirement_text for r in analysis.internal_requirements[:3]]
         internal_requirements_text = "\n".join(internal_requirements) or "요구사항 데이터 없음"
@@ -141,13 +131,9 @@ class ReportAgent:
             StageResult(stage_no=5, stage_name="한계/리스크 및 종합 결론", status="completed", started_at=now, completed_at=now),
         ]
 
-    def _apply_dummy_paper_summary(self, draft: ReportDraft) -> ReportDraft:
-        draft.report.sections.paper_tech_summary_3lines = DUMMY_PAPER_SUMMARY
-        return draft
-
     def invoke(self, analysis: AnalysisResult) -> FinalResponse:
         if self.chain is None:
-            draft = self._apply_dummy_paper_summary(self._fallback_report(analysis))
+            draft = self._fallback_report(analysis)
             return FinalResponse(
                 paper_id=analysis.paper_id,
                 internal_doc_id=analysis.internal_doc_id,
@@ -166,8 +152,6 @@ class ReportAgent:
                 draft = ReportDraft.model_validate(draft)
         except Exception:
             draft = self._fallback_report(analysis)
-
-        draft = self._apply_dummy_paper_summary(draft)
 
         return FinalResponse(
             paper_id=analysis.paper_id,

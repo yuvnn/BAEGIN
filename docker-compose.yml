@@ -4,10 +4,16 @@ services:
     ports:
       - "15173:80"
     depends_on:
-      - auth-server
-      - user-service
-      - paper-service
-      - monitoring-service
+      auth-server:
+        condition: service_started
+      user-service:
+        condition: service_started
+      paper-service:
+        condition: service_started
+      monitoring-service:
+        condition: service_started
+      internal-service:
+        condition: service_healthy
 
   auth-server:
     build: ./auth-server
@@ -41,6 +47,8 @@ services:
       - CHROMA_COLLECTION_INTERNAL=internal_docs
     ports:
       - "18084:8000"
+    volumes:
+      - ./data/internal_docs:/data/internal_docs:ro
     depends_on:
       - chroma
     healthcheck:

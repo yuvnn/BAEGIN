@@ -1,7 +1,5 @@
 <template>
   <main class="container">
-    <h1>Paper Monitoring Platform</h1>
-    <p class="sub">논문 요약 및 사내 문서 비교 템플릿</p>
     <DashboardView />
   </main>
 </template>
@@ -11,10 +9,22 @@ import DashboardView from "./views/DashboardView.vue";
 </script>
 
 <style scoped>
+:global(html),
+:global(body),
+:global(#app) {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 .container {
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 24px;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  margin: 0;
+  padding: 0;
   font-family: "Pretendard", "Noto Sans KR", sans-serif;
 }
 

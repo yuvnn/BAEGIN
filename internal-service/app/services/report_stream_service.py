@@ -10,6 +10,7 @@ from uuid import uuid4
 from ..repositories.internal_doc_repository import get_internal_doc
 from ..repositories.paper_repository import get_paper_summary
 from ..schemas.input import GenerateReportRequest
+from ..schemas.citation import Citation
 from ..schemas.report import FinalResponse
 from ..services.citation_service import normalize_citations
 from ..services.pipeline_service import PipelineService
@@ -57,6 +58,24 @@ SECTION_SPECS: list[dict[str, str]] = [
         "content_type": "text/plain",
     },
 ]
+
+
+def _build_five_line_summary(summary_md: str, max_lines: int = 5) -> list[str]:
+    lines: list[str] = []
+    for raw_line in summary_md.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if line.startswith("#"):
+            continue
+        if line.startswith("- "):
+            line = line[2:].strip()
+        line = line.replace("**", "").strip()
+        if line:
+            lines.append(line)
+        if len(lines) >= max_lines:
+            break
+    return lines
 
 
 @dataclass
@@ -124,7 +143,7 @@ class ReportStreamService:
             )
 
             internal_lines = [item.requirement_text for item in analysis_result.internal_requirements[:3]]
-            paper_lines = [item.technology_text for item in analysis_result.paper_technologies[:5]]
+            paper_lines = _build_five_line_summary(paper_summary.summary_md, max_lines=5)
 
             mapping_rows = [
                 "| 요구사항 id | 요구사항 | 기술 id | 기술 설명 | 적합도 | 매핑 근거 |",
@@ -166,6 +185,58 @@ class ReportStreamService:
                 )
 
             final_response = self.pipeline_service.run_report_agent(analysis_result=analysis_result)
+            final_response.report.sections.paper_tech_summary_3lines = (
+                "\n".join(paper_lines) if paper_lines else "논문 기술 데이터 없음"
+            )
+
+            # Keep analysis citations as authoritative source when report agent omits them.
+            if not final_response.citations:
+                final_response.citations = analysis_result.citations
+
+            if not any(c.source_type == "paper" for c in final_response.citations):
+                final_response.citations.append(
+                    Citation(
+                        citation_id=f"c-paper-fallback-{job.report_id}",
+                        source_type="paper",
+                        source_id=paper_summary.paper_id,
+                        source_text=paper_summary.summary_md,
+                        text_quote=None,
+                        anchor="paper_tech_1",
+                        metadata={
+                            "title": paper_summary.title,
+                            "paper_url": paper_summary.paper_url,
+                            "category": paper_summary.category,
+                        },
+                    )
+                )
+
+            first_internal_chunk = internal_doc.internal_chunks[0] if internal_doc.internal_chunks else None
+            paper_anchor_idx = 1
+            internal_anchor_idx = 1
+            for citation in final_response.citations:
+                if citation.source_type == "paper":
+                    # Always expose full paper markdown for consistent summary rendering on UI.
+                    citation.source_text = paper_summary.summary_md
+                    if not citation.metadata:
+                        citation.metadata = {}
+                    citation.metadata.setdefault("paper_url", paper_summary.paper_url)
+                    citation.metadata.setdefault("title", paper_summary.title)
+                    citation.metadata.setdefault("category", paper_summary.category)
+                    if not citation.anchor:
+                        citation.anchor = f"paper_tech_{paper_anchor_idx}"
+                    paper_anchor_idx += 1
+
+                if citation.source_type == "internal" and first_internal_chunk is not None:
+                    if not citation.metadata:
+                        citation.metadata = {}
+                    citation.metadata.setdefault("doc_id", first_internal_chunk.metadata.doc_id)
+                    citation.metadata.setdefault("source_file", first_internal_chunk.metadata.source_file)
+                    citation.metadata.setdefault("source_ext", first_internal_chunk.metadata.source_ext)
+                    citation.metadata.setdefault("title", first_internal_chunk.metadata.title)
+                    if not citation.anchor:
+                        citation.anchor = f"int_req_{internal_anchor_idx}"
+                    internal_anchor_idx += 1
+
             final_response.citations = normalize_citations(final_response.citations)
             final_response.report_id = job.report_id
             final_response.paper_id = job.paper_id

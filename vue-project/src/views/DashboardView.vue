@@ -39,25 +39,6 @@
                 <span class="rpt-meta-date">{{ latestReport?.updated_at || "-" }}</span>
               </div>
               <div class="rpt-summary">{{ reportSections.overview_summary || fallbackOverview }}</div>
-
-              <div class="json-report-card">
-                <div class="json-report-head">
-                  <div class="json-report-title">저장된 최신 비교 JSON</div>
-                  <div v-if="reportLoading" class="json-report-status">로딩 중...</div>
-                  <div v-else-if="reportError" class="json-report-status err">{{ reportError }}</div>
-                  <div v-else-if="latestReport?.saved_at" class="json-report-status">{{ latestReport.saved_at }}</div>
-                </div>
-
-                <template v-if="latestReport">
-                  <div class="json-report-grid">
-                    <div class="json-chip">paper_id: {{ latestReport.paper_id || "-" }}</div>
-                    <div class="json-chip">query: {{ latestReport.query_text || "-" }}</div>
-                    <div class="json-chip">paper_hits: {{ paperHitCount }}</div>
-                    <div class="json-chip">internal_hits: {{ internalHitCount }}</div>
-                  </div>
-                  <pre class="json-report-pre">{{ latestReportPretty }}</pre>
-                </template>
-              </div>
             </div>
 
             <div class="rpt-section">
@@ -236,44 +217,58 @@
           <div class="doc-content">
             <div class="doc-meta">
               <span class="doc-meta-tag">{{ activeTab }}</span>
-              <span class="doc-meta-date">anchor: {{ activeCitation?.anchor || '-' }}</span>
-              <span class="doc-meta-author">source_type: {{ activeCitation?.source_type || '-' }}</span>
+              <span class="doc-meta-date">anchor: {{ viewerCitation?.anchor || '-' }}</span>
+              <span class="doc-meta-author">source_type: {{ viewerCitation?.source_type || '-' }}</span>
             </div>
 
             <div class="doc-title-big">Citation Source Viewer</div>
-            <div class="doc-subtitle">anchor 기준 citation 매핑 · source_text 하이라이트</div>
+            <div class="doc-subtitle">탭별 원문/요약 렌더링 + citation 하이라이트</div>
 
-            <div class="doc-body-text">
-              <template v-if="activeCitation">
-                <p><strong>source_id:</strong> {{ activeCitation.source_id || '-' }}</p>
+            <div class="doc-body-text" v-if="activeTab === '논문요약'">
+              <div v-if="paperSummaryHtml" class="md-render" v-html="paperSummaryHtml"></div>
+              <p v-else>논문 요약 데이터가 없습니다.</p>
+            </div>
+
+            <div class="doc-body-text" v-else-if="activeTab === '논문원문'">
+              <div v-if="paperOriginalUrl" class="doc-embed-wrap">
+                <iframe :src="paperOriginalUrl" class="doc-embed-frame" title="Paper Original PDF" loading="lazy"></iframe>
+              </div>
+              <p v-else>paper_url 정보가 없어 논문 원문을 열 수 없습니다.</p>
+            </div>
+
+            <div class="doc-body-text" v-else>
+              <div v-if="internalPdfUrl" class="doc-embed-wrap">
+                <iframe :src="internalPdfUrl" class="doc-embed-frame" title="Internal PDF" loading="lazy"></iframe>
+              </div>
+              <p v-else>사내문서 PDF 경로를 찾지 못했습니다.</p>
+
+              <template v-if="viewerCitation">
+                <p><strong>source:</strong> {{ readableSourceName(viewerCitation) }}</p>
                 <div class="doc-highlight-box">
-                  <div class="doc-hl-title">source_text (char highlight)</div>
+                  <div class="doc-hl-title">source_text</div>
                   <p class="doc-raw">
                     <span>{{ citationSegments.before }}</span>
-                    <mark class="citation-mark">{{ citationSegments.highlight || '하이라이트 가능한 범위 없음' }}</mark>
+                    <mark class="citation-mark">{{ citationSegments.highlight || '' }}</mark>
                     <span>{{ citationSegments.after }}</span>
                   </p>
                 </div>
-                <p>범위: {{ activeCitation.char_start ?? '-' }} ~ {{ activeCitation.char_end ?? '-' }}</p>
+                <p>범위: {{ viewerCitation.char_start ?? '-' }} ~ {{ viewerCitation.char_end ?? '-' }}</p>
               </template>
-              <template v-else>
-                <p>선택된 citation이 없습니다. 좌측 문장을 클릭해 주세요.</p>
-              </template>
+            </div>
 
-              <div class="rpt-overview" style="padding:12px;margin-top:8px;">
-                <div class="rpt-sec-title">citation 목록</div>
-                <div class="rpt-bullets">
-                  <div
-                    v-for="(c, idx) in citationList"
-                    :key="`citation-${c.citation_id}-${idx}`"
-                    class="rpt-bullet linkable"
-                    @click="openCitation(c)"
-                  >
-                    <span class="bul-dot" :class="c.source_type === 'paper' ? 'bul-blue' : ''"></span>
-                    [{{ c.source_type }}] {{ c.anchor || 'no-anchor' }} / {{ c.source_id }}
-                  </div>
-                  <div v-if="citationList.length === 0" class="rpt-bullet">citation 데이터 없음</div>
+            <div class="rpt-overview" style="padding:12px;margin-top:12px;">
+              <div class="rpt-sec-title">citation 목록</div>
+              <div class="rpt-bullets">
+                <div
+                  v-for="(c, idx) in citationList"
+                  :key="`citation-${c.citation_id}-${idx}`"
+                  class="rpt-bullet linkable"
+                  @click="openCitation(c)"
+                >
+                  <span class="bul-dot" :class="c.source_type === 'paper' ? 'bul-blue' : ''"></span>
+                  [{{ c.source_type }}] {{ readableCitationLabel(c, idx) }}
                 </div>
+                <div v-if="citationList.length === 0" class="rpt-bullet">citation 데이터 없음</div>
               </div>
             </div>
           </div>
@@ -308,6 +303,67 @@ const sectionStatuses = ref({
 
 const FIXED_PAPER_ID = "paper-demo-001";
 const FIXED_INTERNAL_DOC_ID = "internal-b482da9a0b960bde";
+const FIXED_INTERNAL_PDF_FILE = "Web_Service_개발_Mini-Project.pdf";
+const DUMMY_PAPER_ORIGINAL_URL = "https://arxiv.org/pdf/2604.08626";
+const DUMMY_PAPER_SUMMARY_MD = `## 문제 정의
+
+3D 객체 인식은 공간 지능의 핵심 요소로, 단일 이미지에서 객체의 위치, 크기 및 방향을 복구하는 단안 3D 객체 검출이 중요합니다. 기존 방법은 단일 프롬프트 유형에 최적화되어 추가 기하 단서 통합이 어렵고, 데이터셋 범위가 좁아 개방형 세계 일반화 한계가 있습니다.
+
+## 연구 방법론
+
+- WildDet3D 아키텍처: 텍스트, 포인트, 박스 프롬프트를 통합 지원하고 추론 시 보조 깊이 신호를 결합합니다.
+- WildDet3D-Data: 13,500+ 범주, 100만+ 이미지의 대규모 개방형 3D 검출 데이터셋을 구축했습니다.
+- 입력 모달리티: RGB + 선택적 깊이 입력으로 개방형 어휘 인식을 유지하면서 스케일 모호성을 줄였습니다.
+
+## 주요 실험 결과
+
+개방형 세계 벤치마크에서 SOTA를 달성했고, 깊이 단서 결합 시 평균 +20.7 AP 향상을 기록했습니다.
+
+## 핵심 기여 및 의의
+
+- 통합 프롬프트 지원
+- 대규모 인간 검증 데이터셋
+- 깊이 신호 기반 정확도 개선
+
+## 한계점 및 향후 연구
+
+- 깊이 신호 의존성
+- 데이터 편향 가능성
+- 실시간 처리 최적화 필요`;
+
+const DEFAULT_CITATIONS = [
+  {
+    citation_id: "fallback-paper-1",
+    source_type: "paper",
+    source_id: FIXED_PAPER_ID,
+    source_text: DUMMY_PAPER_SUMMARY_MD,
+    text_quote: null,
+    char_start: null,
+    char_end: null,
+    anchor: "paper_tech_1",
+    metadata: {
+      title: "WildDet3D: Open-Vocabulary Monocular 3D Object Detection in the Wild",
+      paper_url: DUMMY_PAPER_ORIGINAL_URL,
+      category: "ML Foundation",
+    },
+  },
+  {
+    citation_id: "fallback-internal-1",
+    source_type: "internal",
+    source_id: FIXED_INTERNAL_DOC_ID,
+    source_text: "-",
+    text_quote: null,
+    char_start: null,
+    char_end: null,
+    anchor: "int_req_1",
+    metadata: {
+      title: "Web Service 개발 Mini-Project",
+      doc_id: FIXED_INTERNAL_DOC_ID,
+      source_file: FIXED_INTERNAL_PDF_FILE,
+      source_ext: ".pdf",
+    },
+  },
+];
 let resizeHandler = null;
 let eventSource = null;
 let lastStreamEventAt = 0;
@@ -336,7 +392,10 @@ const SKELETON_SECTION_CODES = [
 ];
 
 const fallbackOverview = "최신 리포트가 없어서 기본 화면을 표시합니다.";
-const citationList = computed(() => latestReport.value?.citations || []);
+const citationList = computed(() => {
+  const fromReport = latestReport.value?.citations || [];
+  return fromReport.length > 0 ? fromReport : DEFAULT_CITATIONS;
+});
 
 const reportSections = computed(() => {
   return (
@@ -570,10 +629,6 @@ function mappingColClass(header) {
   return "";
 }
 
-const paperHitCount = computed(() => latestReport.value?.comparison?.paper_hits?.ids?.[0]?.length || 0);
-const internalHitCount = computed(() => latestReport.value?.comparison?.internal_hits?.ids?.[0]?.length || 0);
-const latestReportPretty = computed(() => (latestReport.value ? JSON.stringify(latestReport.value, null, 2) : ""));
-
 const sectionAnchorSeeds = {
   internal_requirements_3lines: "int_req_",
   paper_tech_summary_3lines: "paper_tech_",
@@ -602,25 +657,166 @@ function openCitation(citation) {
   if (citation.source_type === "paper") activeTab.value = "논문요약";
 }
 
-function openCitationFromSection(sectionKey, idx) {
-  activeLink.value = `${sectionKey}-${idx}`;
+function findBestCitationForLine(sectionKey, idx, lineText) {
   const guessed = resolveAnchor(sectionKey, idx);
-  let citation = null;
-
-  if (guessed) citation = citationList.value.find((c) => c.anchor === guessed);
-  if (!citation && guessed) citation = citationList.value.find((c) => typeof c.anchor === "string" && c.anchor.includes(guessed));
-
-  if (!citation) {
-    const sourceHint = sectionSourceHint[sectionKey];
-    if (sourceHint) citation = citationList.value.find((c) => c.source_type === sourceHint);
+  if (guessed) {
+    const exact = citationList.value.find((c) => c.anchor === guessed);
+    if (exact) return exact;
+    const partial = citationList.value.find((c) => typeof c.anchor === "string" && c.anchor.includes(guessed));
+    if (partial) return partial;
   }
 
-  if (!citation && citationList.value.length > 0) citation = citationList.value[0];
+  const normalizedLine = String(lineText || "").trim();
+  if (normalizedLine) {
+    const quoteMatched = citationList.value.find((c) => String(c.text_quote || "").trim() === normalizedLine);
+    if (quoteMatched) return quoteMatched;
+
+    const included = citationList.value.find((c) => String(c.source_text || "").includes(normalizedLine));
+    if (included) return included;
+  }
+
+  const sourceHint = sectionSourceHint[sectionKey];
+  if (sourceHint) {
+    const bySource = citationList.value.find((c) => c.source_type === sourceHint);
+    if (bySource) return bySource;
+  }
+
+  return citationList.value[0] || null;
+}
+
+function openCitationFromSection(sectionKey, idx) {
+  activeLink.value = `${sectionKey}-${idx}`;
+  const linesBySection = {
+    internal_requirements_3lines: internalRequirementLines.value,
+    paper_tech_summary_3lines: paperTechLines.value,
+    candidate_technologies_10lines: candidateTechLines.value,
+    integration_design_10lines: integrationDesignLines.value,
+    expected_impact_5lines: expectedImpactLines.value,
+    limitations_and_risks_5lines: limitationRiskLines.value,
+    final_conclusion_and_priorities_5lines: finalConclusionLines.value,
+  };
+  const currentLine = linesBySection[sectionKey]?.[idx] || "";
+  const citation = findBestCitationForLine(sectionKey, idx, currentLine);
   openCitation(citation);
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderMarkdown(mdText) {
+  if (!mdText) return "";
+  const htmlParts = [];
+  const lines = String(mdText).split("\n");
+  let inList = false;
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      if (inList) {
+        htmlParts.push("</ul>");
+        inList = false;
+      }
+      continue;
+    }
+
+    if (line.startsWith("## ")) {
+      if (inList) {
+        htmlParts.push("</ul>");
+        inList = false;
+      }
+      htmlParts.push(`<h3>${escapeHtml(line.slice(3))}</h3>`);
+      continue;
+    }
+
+    if (line.startsWith("- ")) {
+      if (!inList) {
+        htmlParts.push("<ul>");
+        inList = true;
+      }
+      htmlParts.push(`<li>${escapeHtml(line.slice(2))}</li>`);
+      continue;
+    }
+
+    if (inList) {
+      htmlParts.push("</ul>");
+      inList = false;
+    }
+    htmlParts.push(`<p>${escapeHtml(line)}</p>`);
+  }
+
+  if (inList) htmlParts.push("</ul>");
+  return htmlParts.join("");
+}
+
+const paperCitation = computed(() => {
+  if (activeCitation.value?.source_type === "paper") return activeCitation.value;
+  return citationList.value.find((c) => c.source_type === "paper") || null;
+});
+
+const internalCitation = computed(() => {
+  if (activeCitation.value?.source_type === "internal") return activeCitation.value;
+  return citationList.value.find((c) => c.source_type === "internal") || null;
+});
+
+const viewerCitation = computed(() => {
+  if (activeTab.value === "사내문서") return internalCitation.value;
+  return paperCitation.value;
+});
+
+const paperSummaryMarkdown = computed(() => {
+  return paperCitation.value?.source_text || reportSections.value.paper_tech_summary_3lines || DUMMY_PAPER_SUMMARY_MD;
+});
+
+const paperSummaryHtml = computed(() => renderMarkdown(paperSummaryMarkdown.value));
+
+const paperOriginalUrl = computed(() => {
+  if (paperCitation.value?.metadata?.paper_url) return String(paperCitation.value.metadata.paper_url);
+  return DUMMY_PAPER_ORIGINAL_URL;
+});
+
+const internalPdfUrl = computed(() => {
+  const base = (import.meta.env.VITE_INTERNAL_API || "/internal-api").replace(/\/$/, "");
+  const metadata = internalCitation.value?.metadata || {};
+  const sourceFile = metadata.source_file ? String(metadata.source_file) : "";
+
+  if (sourceFile && sourceFile !== "unknown.pdf") {
+    const fileName = sourceFile.split("/").pop() || sourceFile;
+    return `${base}/assets/internal-docs/${encodeURIComponent(fileName)}`;
+  }
+
+  const docId = metadata.doc_id ? String(metadata.doc_id) : latestReport.value?.internal_doc_id;
+  if (docId) return `${base}/assets/internal-docs/by-doc/${encodeURIComponent(docId)}`;
+  return `${base}/assets/internal-docs/${encodeURIComponent(FIXED_INTERNAL_PDF_FILE)}`;
+});
+
+function readableCitationLabel(citation, idx) {
+  const metaTitle = citation?.metadata?.title ? String(citation.metadata.title) : "";
+  const anchor = citation?.anchor ? String(citation.anchor) : `ref-${idx + 1}`;
+  if (citation?.source_type === "paper") {
+    return `${metaTitle || "논문 근거"} (${anchor})`;
+  }
+
+  const pageNo = citation?.metadata?.page_no;
+  const pagePart = Number.isInteger(pageNo) ? `, p.${pageNo}` : "";
+  return `${metaTitle || "사내문서 근거"} (${anchor}${pagePart})`;
+}
+
+function readableSourceName(citation) {
+  if (!citation) return "-";
+  const metaTitle = citation?.metadata?.title ? String(citation.metadata.title) : "";
+  if (metaTitle) return metaTitle;
+  if (citation.source_type === "paper") return "논문 요약";
+  return "사내문서";
+}
+
 const citationSegments = computed(() => {
-  const c = activeCitation.value;
+  const c = viewerCitation.value;
   if (!c || !c.source_text) return { before: "", highlight: "", after: "" };
 
   const sourceText = String(c.source_text);
@@ -883,9 +1079,15 @@ body,
 .doc-subtitle { font-size: 10.5px; color: rgba(130,150,205,.5); margin-bottom: 20px; }
 .doc-body-text { font-size: 11.5px; line-height: 1.8; color: rgba(185,200,240,.72); display: flex; flex-direction: column; gap: 14px; }
 .doc-raw { font-size: 11px; line-height: 1.85; }
-.doc-highlight-box { background: rgba(255,255,255,.05); border-radius: 14px; padding: 16px 18px; border-left: 2px solid rgba(37,99,235,.4); }
+.doc-highlight-box { background: rgba(255,255,255,.05); border-radius: 14px; padding: 16px 18px; }
 .doc-hl-title { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(37,99,235,.65); margin-bottom: 10px; }
 .citation-mark { background: rgba(37,99,235,.35); color: rgba(230,240,255,.95); padding: 0 2px; }
+.doc-embed-wrap { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,.22); min-height: 520px; }
+.doc-embed-frame { width: 100%; height: 520px; border: 0; background: #0a1023; }
+.md-render h3 { font-family: "Syne", sans-serif; font-size: 12px; color: rgba(204,224,255,.9); margin: 10px 0 6px; }
+.md-render p { margin: 0 0 8px; color: rgba(186,206,246,.84); }
+.md-render ul { margin: 0 0 10px 18px; }
+.md-render li { margin: 0 0 6px; color: rgba(186,206,246,.84); }
 
 @media (max-width: 1024px) {
   .body { grid-template-columns: 1fr; }

@@ -91,6 +91,19 @@ services:
       kafka:
         condition: service_healthy
 
+  chatbot-service:
+    build: ./chatbot-service
+    env_file:
+      - .env
+    environment:
+      - SERVICE_NAME=chatbot-service
+      - DATABASE_URL=mysql+pymysql://baegin_user:baegin_password@mariadb:3306/baegin_db
+    ports:
+      - "18086:8000"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
   chroma:
     image: chromadb/chroma:latest
     ports:

@@ -107,6 +107,8 @@ services:
       - PAPER_SERVICE_URL=http://paper-service:8000
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - MONITOR_INTERVAL_MINUTES=60
+      - IMPACT_THRESHOLD=30
+      - HF_UPVOTE_THRESHOLD=2
       - EUREKA_SERVER=http://eureka-server:8761/eureka
     ports:
       - "18085:8000"

@@ -30,7 +30,7 @@
           </div>
           <div class="prof-item"><span class="prof-item-icon">⚙</span>설정</div>
           <div class="prof-item"><span class="prof-item-icon">🔔</span>알림</div>
-          <div class="prof-item"><span class="prof-item-icon">📁</span>내 문서</div>
+          <div class="prof-item"><span class="prof-item-icon">👤</span>마이페이지</div>
           <div class="prof-div"></div>
           <div class="prof-item prof-logout" @click="doLogout"><span class="prof-item-icon">→</span>로그아웃</div>
         </div>
@@ -55,8 +55,7 @@ const userInitials = computed(() => {
 })
 
 function onLogoClick() {
-  store.p1ModalOpen = false
-  store.go('p1')
+  window.location.reload()
 }
 
 function doSearch() {

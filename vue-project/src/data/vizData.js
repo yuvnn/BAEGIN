@@ -1,10 +1,10 @@
 export const CL = [
-  { name: 'NLP · 언어모델',  color: '#3b82f6', glow: 'rgba(37,99,235,0.32)',   cx: 0.08,  cy: -0.22, cz: 0.05,  r: 0.19 },
-  { name: 'AI · 기계학습',   color: '#ff7a2f', glow: 'rgba(255,100,30,0.28)',  cx: -0.05, cy: 0.1,   cz: -0.18, r: 0.21 },
-  { name: '이상탐지',         color: '#ef4444', glow: 'rgba(220,38,38,0.30)',   cx: 0.22,  cy: 0.14,  cz: 0.12,  r: 0.14 },
-  { name: '컴퓨터비전',       color: '#ff9a55', glow: 'rgba(255,130,50,0.25)',  cx: -0.2,  cy: -0.08, cz: 0.2,   r: 0.17 },
-  { name: '추천시스템',       color: '#1e4fba', glow: 'rgba(25,65,180,0.28)',   cx: 0.18,  cy: -0.05, cz: -0.2,  r: 0.15 },
-  { name: '멀티에이전트',     color: '#ffb870', glow: 'rgba(255,160,80,0.22)',  cx: -0.1,  cy: 0.25,  cz: 0.1,   r: 0.12 },
+  { name: 'Language & Text',    color: '#6ea8fe', glow: 'rgba(110,168,254,0.28)', cx: 0.08,  cy: -0.22, cz: 0.05,  r: 0.19 },
+  { name: 'ML Foundation',      color: '#4dd9ac', glow: 'rgba(77,217,172,0.24)',  cx: -0.05, cy: 0.1,   cz: -0.18, r: 0.21 },
+  { name: 'Robotics & Control', color: '#f87171', glow: 'rgba(248,113,113,0.26)', cx: 0.22,  cy: 0.14,  cz: 0.12,  r: 0.14 },
+  { name: 'Vision & Graphics',  color: '#c084fc', glow: 'rgba(192,132,252,0.24)', cx: -0.2,  cy: -0.08, cz: 0.2,   r: 0.17 },
+  { name: 'Ethics & Society',   color: '#fbbf24', glow: 'rgba(251,191,36,0.24)',  cx: 0.18,  cy: -0.05, cz: -0.2,  r: 0.15 },
+  { name: 'Multi-Agent & RL',   color: '#67e8f9', glow: 'rgba(103,232,249,0.22)', cx: -0.1,  cy: 0.25,  cz: 0.1,   r: 0.12 },
 ]
 
 export const PP = [

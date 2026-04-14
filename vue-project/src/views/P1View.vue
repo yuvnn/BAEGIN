@@ -128,6 +128,12 @@ const modal = reactive({
 
 const activePaperIdx = ref(null)
 
+function goToCategory(catName) {
+  store.curCat = catName
+  store.searchQuery = ''
+  store.go('p2')
+}
+
 function sc(s) { return s >= 85 ? '#ff8c42' : s >= 70 ? '#ffb470' : 'rgba(140,160,200,0.7)' }
 function scc(s) { return s >= 85 ? 'sh' : s >= 70 ? 'sm' : 'sl' }
 
@@ -217,7 +223,7 @@ function closeModal() {
 
 // ── Canvas Viz ───────────────────────────────────────────────
 let W = 0, H = 0, vctx = null
-let selIdx = null, hovIdx = null, pCache = []
+let selIdx = null, hovIdx = null, pCache = [], clCache = []
 let rotX = 0.28, rotY = 0.52, zoom = 1.0
 let dragging = false, lmx = 0, lmy = 0, vx2 = 0, vy2 = 0, dd = 0
 let autoRotating = true, autoResumeTimer = null, animId = null
@@ -251,6 +257,7 @@ function redraw() {
   const bps = bgPts.map((p, i) => ({ p, pr: proj(p.x, p.y, p.z), t: 'b', i }))
   const vps = pPts.map((p, i) => ({ p, pr: proj(p.x, p.y, p.z), t: 'p', i }))
   pCache = vps
+  clCache = CL.map((cl, i) => ({ pr: proj(cl.cx, cl.cy, cl.cz), i }))
   const drawn = new Set()
   PP.forEach((p, i) => {
     const sp = vps[i].pr
@@ -364,8 +371,8 @@ onMounted(() => {
     pCache.forEach(({ pr, i }) => { const d = Math.hypot(pr.sx - mx, pr.sy - my); if (d < nd) { nd = d; near = i } })
     if (near !== hovIdx) { hovIdx = near; redraw() }
     if (near !== null) {
-      tooltip.title = PP[near].short
-      tooltip.meta = CL[PP[near].cl].name + ' · ' + PP[near].venue + ' ' + PP[near].year
+      tooltip.title = CL[PP[near].cl].name
+      tooltip.meta = ''
       tooltip.left = Math.min(mx + 13, W - 190)
       tooltip.top = Math.max(my - 58, 8)
       tooltip.show = true
@@ -376,9 +383,9 @@ onMounted(() => {
     if (dd > 6) return
     const rect = vc.getBoundingClientRect()
     const mx = e.clientX - rect.left, my = e.clientY - rect.top
-    let near = null, nd = 30
-    pCache.forEach(({ pr, i }) => { const d = Math.hypot(pr.sx - mx, pr.sy - my); if (d < nd) { nd = d; near = i } })
-    if (near !== null) openModal(near)
+    let nearCl = null, ndCl = 80
+    clCache.forEach(({ pr, i }) => { const d = Math.hypot(pr.sx - mx, pr.sy - my); if (d < ndCl) { ndCl = d; nearCl = i } })
+    if (nearCl !== null) goToCategory(CL[nearCl].name)
   })
 
   function loop() {

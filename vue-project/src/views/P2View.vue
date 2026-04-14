@@ -44,7 +44,7 @@
           </div>
         </div>
         <div class="pcard-side">
-          <span v-for="t in p.tags.slice(0, 2)" :key="t" class="tag" :class="CAT_TAG[p.cat] || 'tt'">{{ t }}</span>
+          <span class="pcard-cat-badge" :style="catBadgeStyle(p.cat)">{{ p.cat }}</span>
         </div>
       </div>
     </div>
@@ -54,7 +54,26 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { store } from '../store.js'
-import { PAPERS, CATS, CAT_TAG } from '../data/papers.js'
+import { PAPERS, CATS } from '../data/papers.js'
+import { CL } from '../data/vizData.js'
+
+const clColorMap = Object.fromEntries(CL.map(c => [c.name, { color: c.color, glow: c.glow }]))
+
+function catBadgeStyle(cat) {
+  const c = clColorMap[cat]
+  if (!c) return {}
+  return {
+    background: c.glow,
+    color: c.color,
+    border: `1px solid ${c.color}55`,
+    fontSize: '10px',
+    padding: '3px 9px',
+    borderRadius: '20px',
+    fontWeight: '600',
+    whiteSpace: 'nowrap',
+    display: 'inline-block'
+  }
+}
 
 const dateFrom = ref('')
 const dateTo = ref('')

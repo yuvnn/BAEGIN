@@ -16,14 +16,13 @@
           <span class="dh-sub">조회 {{ p.views?.toLocaleString() }}</span>
         </div>
         <div class="dh-tags">
-          <span v-for="(t, i) in p.tags" :key="t" class="tag" :class="TAG_C[i % 5]">{{ t }}</span>
+          <span class="dh-cat-badge" :style="catBadgeStyle">{{ p.cat }}</span>
         </div>
       </div>
       <div class="dbody">
         <div class="d-orig">
           <div class="sec-head">
             <span>원본</span>
-            <button class="btn-back" style="font-size:11px;" @click="store.go('p4')">비교 문서 생성 →</button>
           </div>
           <div class="sec-body" v-html="origHtml"></div>
         </div>
@@ -59,10 +58,22 @@
 import { computed } from 'vue'
 import { store } from '../store.js'
 import { TAG_C } from '../data/papers.js'
+import { CL } from '../data/vizData.js'
 import { fmt, fmtMd } from '../utils/format.js'
 
 const p = computed(() => store.curPaper)
 const bcTitle = computed(() => { const t = p.value.title; return t.length > 45 ? t.slice(0, 45) + '…' : t })
 const origHtml = computed(() => fmt(p.value.orig || ''))
 const summHtml = computed(() => fmtMd(p.value.summ || ''))
+
+const clColorMap = Object.fromEntries(CL.map(c => [c.name, { color: c.color, glow: c.glow }]))
+const catBadgeStyle = computed(() => {
+  const c = clColorMap[p.value.cat]
+  if (!c) return {}
+  return {
+    background: c.glow,
+    color: c.color,
+    border: `1px solid ${c.color}55`,
+  }
+})
 </script>

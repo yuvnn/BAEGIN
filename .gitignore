@@ -36,3 +36,5 @@ troubleshooting_template.md
 
 # Local test artifacts
 local_chroma_test_db/
+
+*.md

@@ -30,4 +30,12 @@ F-02 이벤트 발행 Kafka 토픽에 new_paper_detected P0 Y 이벤트 발행
 - AI Agent 특정 목표를 자율적으로 수행하는 LLM 기반 소프트웨어 컴포넌트
 - Kafka 분산 이벤트 스트리밍 플랫폼. 서비스 간 비동기 메시지 전달에 사용
 
+| **대분류** | **설명** | **해당 arXiv 태그 (예시)** |
+| --- | --- | --- |
+| **Language & Text** | 언어 모델, 번역, 텍스트 분석 | `cs.CL` (Computation and Language) |
+| **Vision & Graphics** | 이미지, 비디오 인식, 3D 생성 | `cs.CV` (Computer Vision) |
+| **Robotics & Control** | 물리적 하드웨어 제어, 자율 주행 | `cs.RO` (Robotics) |
+| **ML Foundation** | 알고리즘 이론, 최적화, 통계 | `cs.LG`, `cs.AI`, `stat.ML` |
+| **Multi-Agent & RL** | 에이전트 협업, 강화학습 전략 | `cs.MA`, `cs.AI` |
+| **Ethics & Society** | 안전성, 편향성, 법적 문제 | `cs.CY` (Computers and Society) |
 

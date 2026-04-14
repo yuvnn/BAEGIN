@@ -7,6 +7,8 @@
       <button class="nav-btn" :class="{ on: store.currentPage === 'p2' || store.currentPage === 'p3' }" @click="store.go('p2')">논문리스트</button>
       <span class="nav-sep">|</span>
       <button class="nav-btn" :class="{ on: store.currentPage === 'p5' || store.currentPage === 'p4' }" @click="store.go('p5')">비교보고서</button>
+      <span class="nav-sep">|</span>
+      <button class="nav-btn" :class="{ on: store.currentPage === 'p6' }" @click="store.go('p6')">AI 리뷰어</button>
     </div>
     <div class="search-box">
       <input

@@ -6,13 +6,14 @@
         <canvas ref="vizCanvasRef" id="vizCanvas" :class="{ drag: isDragging }"></canvas>
         <div class="viz-info">드래그로 회전 · 스크롤로 확대/축소 · 클릭으로 논문 선택</div>
         <!-- Automated Reviewer Panel -->
-        <div class="reviewer-panel">
+        <div class="reviewer-panel" @click="store.go('p6')">
           <div class="rp-title">Automated Reviewer</div>
           <div class="rp-desc">3인 심사 앙상블<br>+ 반성 루프 + Area Chair</div>
           <div class="rp-score-row">
             <span class="rp-badge accept">≥ 6.0 Accept</span>
             <span class="rp-badge range">AIRA 1~10</span>
           </div>
+          <div class="rp-hint">클릭하여 자세히 보기 →</div>
         </div>
         <div class="p1-legend">
           <div v-for="cl in CL" :key="cl.name" class="p1-legend-item">

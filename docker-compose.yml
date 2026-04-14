@@ -25,6 +25,8 @@ services:
 
   paper-service:
     build: ./paper-service
+    env_file:
+      - .env
     environment:
       - SERVICE_NAME=paper-service
       - CHROMA_HOST=chroma

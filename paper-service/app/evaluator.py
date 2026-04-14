@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import re
 from typing import List, Dict, Any
 from openai import OpenAI
 from pydantic import BaseModel
@@ -16,8 +17,16 @@ class EvaluationResult(BaseModel):
     decision: str  # Accept, Weak Accept, Borderline, Weak Reject, Reject
     review: str    # Detailed meta-review or summary of the process
 
+def clean_for_prompt(text: str) -> str:
+    """Escapes characters that might break the prompt or JSON structure."""
+    if not text:
+        return ""
+    # Ensure text doesn't contain weird characters that break LLM processing
+    return text.replace('{', '(').replace('}', ')')
+
 def generate_review_draft(keyword: str, title: str, text: str, temperature: float) -> Dict[str, Any]:
     """Generates an initial NeurIPS-style review draft."""
+    clean_text = clean_for_prompt(text[:15000])
     prompt = f"""
     You are an expert AI researcher acting as a reviewer for a top-tier machine learning conference (e.g., NeurIPS).
     Evaluate the following paper based on its relevance to the keyword '{keyword}', methodology, and originality.
@@ -26,7 +35,7 @@ def generate_review_draft(keyword: str, title: str, text: str, temperature: floa
     If the paper is completely unrelated to AI/ML (e.g., pure biology or finance without AI), it must be rejected.
     
     Title: {title}
-    Text: {text[:15000]}  # Limiting context for prompt efficiency
+    Text Content: {clean_text}
     
     Provide your evaluation in strict JSON format according to this rubric:
     1. Summary: Concise objective summary of contributions.
@@ -54,7 +63,7 @@ def generate_review_draft(keyword: str, title: str, text: str, temperature: floa
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a critical academic reviewer. You focus on flaws and technical correctness."},
+                {"role": "system", "content": "You are a critical academic reviewer. You focus on flaws and technical correctness. Output ONLY valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
@@ -68,6 +77,8 @@ def generate_review_draft(keyword: str, title: str, text: str, temperature: floa
 def reflect_on_review(title: str, text: str, current_review: Dict[str, Any]) -> Dict[str, Any]:
     """Models the self-reflection loop to improve review accuracy and critical depth."""
     review_json = json.dumps(current_review, indent=2)
+    clean_text = clean_for_prompt(text[:5000])
+    
     prompt = f"""
     You are a Meta-Reviewer reflecting on a generated review for the paper: {title}.
     
@@ -75,7 +86,7 @@ def reflect_on_review(title: str, text: str, current_review: Dict[str, Any]) -> 
     {review_json}
     
     Tasks:
-    1. Critically re-examine the paper's text if provided: {text[:5000]}...
+    1. Critically re-examine the paper's snippets: {clean_text}
     2. Does the initial review overestimate the results?
     3. Is the score justified by the identified weaknesses?
     4. Adjust the scores and qualitative analysis if they were too optimistic or missed a critical flaw.
@@ -87,7 +98,7 @@ def reflect_on_review(title: str, text: str, current_review: Dict[str, Any]) -> 
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a skeptical meta-reviewer. Your job is to ensure the review is not too lenient."},
+                {"role": "system", "content": "You are a skeptical meta-reviewer. Ensure the review is not too lenient. Output ONLY valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
@@ -99,15 +110,15 @@ def reflect_on_review(title: str, text: str, current_review: Dict[str, Any]) -> 
         return current_review
 
 def generate_meta_review(keyword: str, reviews: List[Dict[str, Any]]) -> EvaluationResult:
-    """Acts as an Area Chair to synthesize 5 independent ensemble reviews."""
+    """Acts as an Area Chair to synthesize independent ensemble reviews."""
     reviews_json = json.dumps(reviews, indent=2)
     prompt = f"""
-    You are an Area Chair for a top-tier AI conference. You have 5 independent reviews for a submission.
+    You are an Area Chair for a top-tier AI conference. You have independent reviews for a submission.
     Your task is to synthesize these reviews and make a final consensus decision.
     
     Conference Context: Topic '{keyword}'
     
-    Reviews:
+    Committee Reviews:
     {reviews_json}
     
     Synthesize the consensus. If reviewers are split, lean towards the more critical and well-reasoned arguments.
@@ -123,7 +134,7 @@ def generate_meta_review(keyword: str, reviews: List[Dict[str, Any]]) -> Evaluat
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are an Area Chair making a final decision based on committee reviews."},
+                {"role": "system", "content": "You are an Area Chair making a final decision based on committee reviews. Output ONLY valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},
@@ -131,7 +142,6 @@ def generate_meta_review(keyword: str, reviews: List[Dict[str, Any]]) -> Evaluat
         )
         result = json.loads(response.choices[0].message.content)
         
-        # Acceptance threshold is typically >= 6.0
         final_score = result.get("final_score", 0.0)
         accept = final_score >= 6.0
         
@@ -147,13 +157,13 @@ def generate_meta_review(keyword: str, reviews: List[Dict[str, Any]]) -> Evaluat
 
 def evaluate_paper(keyword: str, title: str, abstract: str, full_text: str = "") -> EvaluationResult:
     """
-    Complete AI Scientist evaluation pipeline:
-    1. Ensemble of 5 independent reviews.
-    2. Each review undergoes 5 reflection loops.
+    Complete AI Scientist evaluation pipeline (Optimized for performance):
+    1. Ensemble of 3 independent reviews (Reduced from 5 for speed).
+    2. Each review undergoes 2 reflection loops (Reduced from 5 for speed).
     3. Meta-review (Area Chair) synthesis.
     """
-    num_ensemble = 5
-    num_reflections = 5
+    num_ensemble = 3
+    num_reflections = 2
     
     # Use full text if available, otherwise fallback to abstract
     content_to_review = full_text if full_text else abstract
@@ -162,10 +172,8 @@ def evaluate_paper(keyword: str, title: str, abstract: str, full_text: str = "")
     
     for i in range(num_ensemble):
         logger.info(f"Generating ensemble review {i+1}/{num_ensemble}...")
-        # Use low temperature for consistency as per doc
         review = generate_review_draft(keyword, title, content_to_review, temperature=0.1)
         
-        # Reflection loops
         for r in range(num_reflections):
             logger.info(f"  Reflection loop {r+1}/{num_reflections} for review {i+1}...")
             review = reflect_on_review(title, content_to_review, review)

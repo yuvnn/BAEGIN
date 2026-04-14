@@ -1,5 +1,15 @@
 import json
 import logging
+import sys
+
+# Configure logging to output to stdout
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    stream=sys.stdout
+)
+logger = logging.getLogger(__name__)
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -8,8 +18,6 @@ from typing import List, Dict, Any
 from .consumer import start_kafka_consumer
 from .chroma_client import ensure_collection, get_recent_papers
 from .database import engine, Base
-
-logger = logging.getLogger(__name__)
 
 RULES = []
 
@@ -21,6 +29,7 @@ class EnrollRule(BaseModel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("Starting paper-service lifespan...")
     # Initialize MariaDB Tables
     try:
         Base.metadata.create_all(bind=engine)
@@ -31,13 +40,15 @@ async def lifespan(app: FastAPI):
     # Initialize ChromaDB connection on startup
     try:
         ensure_collection()
+        logger.info("ChromaDB collection initialized.")
     except Exception as e:
         logger.error(f"Failed to initialize ChromaDB collection: {e}")
         
     # Start background Kafka consumer
+    logger.info("Starting background Kafka consumer thread...")
     start_kafka_consumer()
     yield
-    # Cleanup logic (if any) goes here
+    logger.info("Shutting down paper-service...")
 
 app = FastAPI(title="paper-service", version="0.1.0", lifespan=lifespan)
 

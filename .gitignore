@@ -1,6 +1,8 @@
 
-
 .DS_Store
+
+# Virtual environment
+.venv
 
 # Environment files
 .env
@@ -31,3 +33,6 @@ data/**
 # 개인 파일
 troubleshooting.md
 troubleshooting_template.md
+
+# Local test artifacts
+local_chroma_test_db/

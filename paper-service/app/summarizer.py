@@ -8,6 +8,14 @@ logger = logging.getLogger(__name__)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+def clean_for_prompt(text: str) -> str:
+    """Escapes characters that might break the prompt or JSON structure."""
+    if not text:
+        return ""
+    # Remove control characters and escape braces
+    text = "".join(char for char in text if char.isprintable() or char in "\n\r\t")
+    return text.replace('{', '(').replace('}', ')')
+
 def summarize_paper(paper_id: str, title: str, abstract: str, body_text: str = "") -> Dict[str, Any]:
     """
     Generates a concise summary of the paper and formats it according to the PaperSummary schema.
@@ -16,10 +24,9 @@ def summarize_paper(paper_id: str, title: str, abstract: str, body_text: str = "
     if body_text:
         text_to_summarize = f"{abstract}\n\n{body_text}"
         
-    # Truncate text to avoid hitting token limits for extremely long papers
+    # Truncate text to avoid hitting token limits
     max_chars = 15000
-    if len(text_to_summarize) > max_chars:
-        text_to_summarize = text_to_summarize[:max_chars] + "... [truncated]"
+    clean_text = clean_for_prompt(text_to_summarize[:max_chars])
 
     prompt = f"""
     Please provide a comprehensive yet concise summary of the following paper.
@@ -35,14 +42,14 @@ def summarize_paper(paper_id: str, title: str, abstract: str, body_text: str = "
     }}
     
     Title: {title}
-    Text: {text_to_summarize}
+    Text: {clean_text}
     """
     
     try:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a highly skilled research assistant that summarizes academic papers into strict JSON. You format your summaries beautifully using Markdown."},
+                {"role": "system", "content": "You are a highly skilled research assistant that summarizes academic papers into strict JSON. You format your summaries beautifully using Markdown. Output ONLY valid JSON."},
                 {"role": "user", "content": prompt}
             ],
             response_format={"type": "json_object"},

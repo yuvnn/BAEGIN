@@ -1,37 +1,95 @@
 package com.baegin.auth.controller;
 
 import com.baegin.auth.dto.LoginRequest;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.util.Base64;
+import com.baegin.auth.dto.OtpSendRequest;
+import com.baegin.auth.dto.RegisterRequest;
+import com.baegin.auth.service.JwtService;
+import com.baegin.auth.service.OtpStore;
+import com.baegin.auth.service.SlackService;
+import com.baegin.auth.service.UserStore;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class AuthController {
 
+    private final JwtService jwtService;
+    private final OtpStore otpStore;
+    private final SlackService slackService;
+    private final UserStore userStore;
+
+    public AuthController(JwtService jwtService, OtpStore otpStore,
+                          SlackService slackService, UserStore userStore) {
+        this.jwtService = jwtService;
+        this.otpStore = otpStore;
+        this.slackService = slackService;
+        this.userStore = userStore;
+    }
+
     @GetMapping("/health")
     public Map<String, String> health() {
-        Map<String, String> response = new LinkedHashMap<>();
-        response.put("status", "ok");
-        response.put("service", "auth-server");
-        return response;
+        return Map.of("status", "ok", "service", "auth-server");
+    }
+
+    @PostMapping("/auth/otp/send")
+    public ResponseEntity<Map<String, String>> sendOtp(@RequestBody OtpSendRequest req) {
+        if (req.email() == null || req.email().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "email required"));
+        }
+        String code = otpStore.save(req.email());
+        slackService.sendOtp(req.email(), code);
+        return ResponseEntity.ok(Map.of("message", "OTP sent"));
+    }
+
+    @PostMapping("/auth/register")
+    public ResponseEntity<Map<String, Object>> register(@RequestBody RegisterRequest req) {
+        if (!otpStore.verify(req.email(), req.otp())) {
+            return ResponseEntity.status(401).body(Map.of("error", "invalid or expired OTP"));
+        }
+        UserStore.UserRecord user;
+        try {
+            user = userStore.register(req.email(), req.name(), req.keywords(), req.password());
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(409).body(Map.of("error", "이미 가입된 이메일입니다."));
+        }
+        String token = jwtService.generateToken(user.email(), user.userId(), user.name(), user.keywords());
+
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("access_token", token);
+        resp.put("token_type", "bearer");
+        resp.put("user", Map.of(
+                "email", user.email(),
+                "name", user.name(),
+                "keywords", user.keywords()
+        ));
+        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/auth/login")
-    public Map<String, String> login(@RequestBody LoginRequest payload) {
-        String username = payload.username() == null ? "anonymous" : payload.username();
-        String raw = username + ":" + Instant.now().toEpochMilli() + ":" + UUID.randomUUID();
-        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+    public ResponseEntity<Map<String, Object>> login(@RequestBody LoginRequest req) {
+        if (req.email() == null || req.email().isBlank() || req.password() == null || req.password().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "email and password required"));
+        }
+        UserStore.UserRecord user = userStore.find(req.email());
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "가입되지 않은 이메일입니다."));
+        }
+        if (!userStore.verifyPassword(req.email(), req.password())) {
+            return ResponseEntity.status(401).body(Map.of("error", "비밀번호가 올바르지 않습니다."));
+        }
+        String token = jwtService.generateToken(user.email(), user.userId(), user.name(), user.keywords());
 
-        Map<String, String> response = new LinkedHashMap<>();
-        response.put("access_token", token);
-        response.put("token_type", "bearer");
-        return response;
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("access_token", token);
+        resp.put("token_type", "bearer");
+        resp.put("user", Map.of(
+                "email", user.email(),
+                "name", user.name(),
+                "keywords", user.keywords()
+        ));
+        return ResponseEntity.ok(resp);
     }
 }

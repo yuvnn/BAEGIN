@@ -1,5 +1,6 @@
 fastapi==0.115.9
 uvicorn==0.34.0
+py_eureka_client>=0.11.0
 pydantic==2.10.6
 openai==1.54.3
 kafka-python==2.0.2

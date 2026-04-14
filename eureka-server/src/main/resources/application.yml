@@ -1,0 +1,18 @@
+server:
+  port: 8761
+
+spring:
+  application:
+    name: eureka-server
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    register-with-eureka: false   # 자기 자신은 등록하지 않음
+    fetch-registry: false         # 자기 자신은 조회하지 않음
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+  server:
+    wait-time-in-ms-when-sync-empty: 0   # 시작 시 대기 시간 제거 (개발용)
+    enable-self-preservation: false       # 개발 환경에서 self-preservation 비활성화

@@ -1,0 +1,146 @@
+services:
+  vue-project:
+    build: ./vue-project
+    ports:
+      - "15173:80"
+    depends_on:
+      - auth-server
+      - user-service
+      - paper-service
+      - monitoring-service
+
+  auth-server:
+    build: ./auth-server
+    environment:
+      - SERVICE_NAME=auth-server
+    ports:
+      - "18081:8000"
+
+  user-service:
+    build: ./user-service
+    environment:
+      - SERVICE_NAME=user-service
+    ports:
+      - "18082:8000"
+
+  paper-service:
+    build: ./paper-service
+    env_file:
+      - .env
+    environment:
+      - SERVICE_NAME=paper-service
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - CHROMA_COLLECTION_PAPERS=papers
+      - CHROMA_COLLECTION_INTERNAL=internal_docs
+      - KAFKA_BROKER=kafka:9092
+      - KAFKA_TOPIC_PAPERS=new_papers_topic
+      - DATABASE_URL=mysql+pymysql://baegin_user:baegin_password@mariadb:3306/baegin_db
+    ports:
+      - "18083:8000"
+    depends_on:
+      chroma:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+      mariadb:
+        condition: service_healthy
+
+  internal-service:
+    build: ./internal-service
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - CHROMA_COLLECTION_PAPERS=papers
+      - CHROMA_COLLECTION_INTERNAL=internal_docs
+    ports:
+      - "18084:8000"
+    depends_on:
+      - chroma
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  monitoring-service:
+    build: ./monitoring-service
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - CHROMA_COLLECTION_PAPERS=papers
+      - CHROMA_COLLECTION_INTERNAL=internal_docs
+      - INTERNAL_SERVICE_URL=http://internal-service:8000
+      - PAPER_SERVICE_URL=http://paper-service:8000
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - MONITOR_INTERVAL_MINUTES=60
+    ports:
+      - "18085:8000"
+    volumes:
+      - ./data/reports:/app/reports
+    depends_on:
+      chroma:
+        condition: service_started
+      internal-service:
+        condition: service_healthy
+      paper-service:
+        condition: service_started
+      kafka:
+        condition: service_healthy
+
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "18090:8000"
+    volumes:
+      - ./data/chroma:/chroma/chroma
+
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: baegin_db
+      MYSQL_USER: baegin_user
+      MYSQL_PASSWORD: baegin_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kafka:
+    image: confluentinc/cp-kafka:7.7.0
+    container_name: baegin-kafka-1
+    environment:
+      - KAFKA_NODE_ID=1
+      - KAFKA_PROCESS_ROLES=broker,controller
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_LOG_DIRS=/var/lib/kafka/data
+      - CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "19092:9092"
+    volumes:
+      - ./data/kafka:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  mariadb_data:

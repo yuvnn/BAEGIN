@@ -148,7 +148,9 @@ def consume_papers():
                     md_summary=md_summary,
                     paper_url=pdf_url,
                     authors=json.dumps(authors, ensure_ascii=False),
-                    category=category
+                    category=category,
+                    aira_score=evaluation.score,
+                    aira_decision=evaluation.decision,
                 )
                 db.merge(db_summary)
                 db.commit()

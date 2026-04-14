@@ -17,7 +17,7 @@ class ChatbotEngine:
             self.client = None
             logger.warning("OPENAI_API_KEY not set — chatbot will return fallback responses.")
 
-    async def recommend(self, question: str, papers: list[dict]) -> dict:
+    async def recommend(self, question: str, papers: list[dict], stats: dict | None = None) -> dict:
         """
         사용자 질문을 분석해 저장된 논문 중 관련성 높은 논문을 추천합니다.
         """
@@ -27,14 +27,33 @@ class ChatbotEngine:
                 "recommended_papers": [],
             }
 
+        stats = stats or {}
+        total = stats.get("total", len(papers))
+        max_score = stats.get("max_score")
+        avg_score = stats.get("avg_score")
+        accepted_count = stats.get("accepted_count", 0)
+        top_paper = stats.get("top_paper")
+
+        stats_block = f"""[BAEGIN 논문 DB 현황]
+- 총 저장 논문 수: {total}개
+- AIRA Score 평균: {f"{avg_score:.1f}" if avg_score else "N/A"}
+- AIRA Score 최고: {f"{max_score:.1f}" if max_score else "N/A"}
+- Accept 논문 수 (≥ 6.0): {accepted_count}개
+- 최고점 논문 ID: {top_paper["paper_id"] if top_paper else "N/A"} (점수: {f"{top_paper['aira_score']:.1f}" if top_paper and top_paper.get('aira_score') else "N/A"})
+"""
+
         system_prompt = (
             "당신은 BAEGIN 플랫폼의 AI 논문 도우미입니다. "
+            "BAEGIN은 AI 논문을 자동으로 수집하고 'AIRA Score'(AI Research Assessment Score, 1.0~10.0)로 평가합니다. "
+            "AIRA Score는 3인 심사 앙상블 + 1회 반성 루프 + Area Chair 메타리뷰로 산출되며, 6.0 이상이면 Accept입니다. "
             "사용자의 질문을 분석하여 저장된 논문 목록 중 가장 관련성 높은 논문들을 추천하고, "
             "친절하고 간결한 한국어로 답변해주세요. "
+            "논문 개수, 최고 점수 논문, 통계 질문에는 [BAEGIN 논문 DB 현황] 데이터를 활용하세요. "
             "반드시 유효한 JSON만 반환하세요. 다른 텍스트는 절대 포함하지 마세요."
         )
 
-        user_prompt = f"""[저장된 논문 목록]
+        user_prompt = f"""{stats_block}
+[저장된 논문 목록 (AIRA Score 높은 순, 최대 30개)]
 {json.dumps(papers, ensure_ascii=False, indent=2)}
 
 [사용자 질문]
@@ -42,8 +61,10 @@ class ChatbotEngine:
 
 [응답 지침]
 1. 질문 의도를 파악하고 논문 목록에서 관련성 높은 논문의 paper_id를 선정하세요.
-2. 관련 논문이 없으면 recommended_papers를 빈 배열로 반환하고 content에 안내하세요.
-3. 논문 추천이 아닌 일반 질문(사용법, 기능 안내 등)은 content만 작성하고 recommended_papers는 비워두세요.
+2. "논문 몇 개", "총 몇 개" 등 개수 질문 → content에 총 저장 수({total}개)를 명시하고 recommended_papers는 비워두세요.
+3. "가장 높은 점수", "최고 AIRA" 등 질문 → 최고점 논문을 recommended_papers에 포함하세요.
+4. 관련 논문이 없으면 recommended_papers를 빈 배열로 반환하고 content에 안내하세요.
+5. 논문 추천이 아닌 일반 질문(사용법, 기능 안내 등)은 content만 작성하고 recommended_papers는 비워두세요.
 
 [응답 형식 - 이 JSON만 반환]
 {{

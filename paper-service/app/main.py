@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 
 from .consumer import start_kafka_consumer
 from .chroma_client import ensure_collection, get_recent_papers
@@ -39,6 +39,22 @@ async def lifespan(app: FastAPI):
         logger.info("MariaDB tables initialized successfully.")
     except Exception as e:
         logger.error(f"Failed to initialize MariaDB tables: {e}")
+
+    # Online migration: add AIRA Score columns if not present (idempotent)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(
+                "ALTER TABLE paper_summary "
+                "ADD COLUMN IF NOT EXISTS aira_score FLOAT DEFAULT NULL"
+            ))
+            conn.execute(text(
+                "ALTER TABLE paper_summary "
+                "ADD COLUMN IF NOT EXISTS aira_decision VARCHAR(50) DEFAULT NULL"
+            ))
+            conn.commit()
+        logger.info("AIRA Score columns ensured in paper_summary.")
+    except Exception as e:
+        logger.warning(f"Migration warning (non-fatal): {e}")
 
     # Initialize ChromaDB connection on startup
     try:
@@ -82,10 +98,13 @@ def list_papers(limit: int = 50) -> List[Dict[str, Any]]:
         except:
             summary_dict = {"summary": paper.get("document")}
 
+        metadata = paper.get("metadata", {})
         response.append({
             "paper_id": paper.get("paper_id"),
-            "metadata": paper.get("metadata", {}),
-            "summary_data": summary_dict
+            "metadata": metadata,
+            "summary_data": summary_dict,
+            "aira_score": metadata.get("evaluation_score"),    # stored in ChromaDB
+            "aira_decision": metadata.get("evaluation_decision"),
         })
     return response
 
@@ -125,6 +144,8 @@ def get_paper(paper_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
         "paper_url": paper.paper_url,
         "authors": authors,
         "md_summary": paper.md_summary,
+        "aira_score": paper.aira_score,
+        "aira_decision": paper.aira_decision,
     }
 
 

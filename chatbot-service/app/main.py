@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from .chatbot_engine import chatbot_engine
-from .paper_context import fetch_paper_context
+from .paper_context import fetch_paper_context, get_paper_stats
 
 app = FastAPI(title="chatbot-service", version="0.1.0")
 
@@ -42,7 +42,8 @@ async def recommend(payload: RecommendRequest) -> dict:
     logger.info(f"Chatbot query: {payload.question[:80]}")
 
     papers = fetch_paper_context(limit=30)
-    result = await chatbot_engine.recommend(payload.question, papers)
+    stats = get_paper_stats()
+    result = await chatbot_engine.recommend(payload.question, papers, stats)
 
     logger.info(
         f"Recommended {len(result.get('recommended_papers', []))} papers"

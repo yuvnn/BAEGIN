@@ -36,3 +36,8 @@ export const paperServiceClient = axios.create({
   baseURL: import.meta.env.VITE_PAPER_API || "http://localhost:18083",
   timeout: 10000,
 });
+
+export const internalClient = axios.create({
+  baseURL: import.meta.env.VITE_INTERNAL_API || "/internal-api",
+  timeout: 15000,
+});

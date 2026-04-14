@@ -17,20 +17,20 @@
       />
       <button class="btn-s" @click="doSearch">검색</button>
       <div class="prof-wrap" ref="profWrapRef">
-        <button class="prof-btn" @click="toggleProf" title="프로필">KG</button>
+        <button class="prof-btn" @click="toggleProf" title="프로필">{{ userInitials }}</button>
         <div class="prof-drop" :class="{ open: profOpen }">
           <div class="prof-info">
-            <div class="prof-avatar">KG</div>
+            <div class="prof-avatar">{{ userInitials }}</div>
             <div>
-              <div class="prof-name">김규리</div>
-              <div class="prof-email">gyuri.kim@baggin.ai</div>
+              <div class="prof-name">{{ userName }}</div>
+              <div class="prof-email">{{ userEmail }}</div>
             </div>
           </div>
           <div class="prof-item"><span class="prof-item-icon">⚙</span>설정</div>
           <div class="prof-item"><span class="prof-item-icon">🔔</span>알림</div>
           <div class="prof-item"><span class="prof-item-icon">📁</span>내 문서</div>
           <div class="prof-div"></div>
-          <div class="prof-item prof-logout"><span class="prof-item-icon">→</span>로그아웃</div>
+          <div class="prof-item prof-logout" @click="doLogout"><span class="prof-item-icon">→</span>로그아웃</div>
         </div>
       </div>
     </div>
@@ -38,12 +38,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { store } from '../store.js'
 
 const searchInput = ref('')
 const profOpen = ref(false)
 const profWrapRef = ref(null)
+
+const userName = computed(() => store.user?.name || store.user?.email || '사용자')
+const userEmail = computed(() => store.user?.email || '')
+const userInitials = computed(() => {
+  const n = store.user?.name || store.user?.email || '?'
+  return n.slice(0, 2).toUpperCase()
+})
 
 function onLogoClick() {
   store.p1ModalOpen = false
@@ -57,6 +64,11 @@ function doSearch() {
 
 function toggleProf() {
   profOpen.value = !profOpen.value
+}
+
+function doLogout() {
+  profOpen.value = false
+  store.logout()
 }
 
 function onDocClick(e) {

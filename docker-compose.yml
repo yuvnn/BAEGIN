@@ -1,27 +1,54 @@
 services:
+  eureka-server:
+    build: ./eureka-server
+    ports:
+      - "18761:8761"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8761/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  api-gateway:
+    build: ./api-gateway
+    env_file:
+      - .env
+    ports:
+      - "18080:8080"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+
   vue-project:
     build: ./vue-project
     ports:
       - "15173:80"
     depends_on:
-      - auth-server
-      - user-service
-      - paper-service
-      - monitoring-service
+      - api-gateway
 
   auth-server:
     build: ./auth-server
+    env_file:
+      - .env
     environment:
       - SERVICE_NAME=auth-server
     ports:
-      - "18081:8000"
+      - "18081:8080"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
 
   user-service:
     build: ./user-service
     environment:
       - SERVICE_NAME=user-service
+      - EUREKA_SERVER=http://eureka-server:8761/eureka
     ports:
       - "18082:8000"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
 
   paper-service:
     build: ./paper-service
@@ -36,9 +63,12 @@ services:
       - KAFKA_BROKER=kafka:9092
       - KAFKA_TOPIC_PAPERS=new_papers_topic
       - DATABASE_URL=mysql+pymysql://baegin_user:baegin_password@mariadb:3306/baegin_db
+      - EUREKA_SERVER=http://eureka-server:8761/eureka
     ports:
       - "18083:8000"
     depends_on:
+      eureka-server:
+        condition: service_healthy
       chroma:
         condition: service_started
       kafka:
@@ -77,11 +107,14 @@ services:
       - PAPER_SERVICE_URL=http://paper-service:8000
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - MONITOR_INTERVAL_MINUTES=60
+      - EUREKA_SERVER=http://eureka-server:8761/eureka
     ports:
       - "18085:8000"
     volumes:
       - ./data/reports:/app/reports
     depends_on:
+      eureka-server:
+        condition: service_healthy
       chroma:
         condition: service_started
       internal-service:

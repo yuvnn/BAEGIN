@@ -50,4 +50,4 @@ local_chroma_test_db/
 Thumbs.db
 
 # [Personal Files] - 상윤님 개인 메모만 제외
-troubleshooting*.md
+**.md

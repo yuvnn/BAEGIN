@@ -1,5 +1,6 @@
 <template>
-  <template v-if="store.isLoggedIn">
+  <SplashView v-if="splashVisible" :leaving="splashLeaving" />
+  <template v-else-if="store.isLoggedIn">
     <AppNav />
     <P1View v-show="store.currentPage === 'p1'" />
     <P2View v-show="store.currentPage === 'p2'" />
@@ -16,6 +17,7 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { store } from './store.js'
 import AppNav from './components/AppNav.vue'
 import ChatBot from './components/ChatBot.vue'
@@ -27,6 +29,19 @@ import P5View from './views/P5View.vue'
 import P6View from './views/P6View.vue'
 import LoginView from './views/LoginView.vue'
 import SignupView from './views/SignupView.vue'
+import SplashView from './views/SplashView.vue'
+
+const splashVisible = ref(true)
+const splashLeaving = ref(false)
+
+onMounted(() => {
+  setTimeout(() => {
+    splashLeaving.value = true
+    setTimeout(() => {
+      splashVisible.value = false
+    }, 500)
+  }, 1500)
+})
 </script>
 
 <style scoped>

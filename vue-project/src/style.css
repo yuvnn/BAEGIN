@@ -166,7 +166,11 @@ body{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg);color
 /* Automated Reviewer Panel */
 .reviewer-panel{position:absolute;top:14px;left:14px;z-index:5;background:rgba(4,10,28,0.72);backdrop-filter:blur(40px) saturate(160%);-webkit-backdrop-filter:blur(40px) saturate(160%);border-radius:18px;padding:16px 18px;max-width:220px;pointer-events:all;cursor:pointer;box-shadow:0 8px 32px rgba(0,0,20,0.45),inset 0 1px 0 rgba(255,255,255,0.07);transition:all .2s;}
 .reviewer-panel:hover{background:rgba(4,10,28,0.85);box-shadow:0 12px 40px rgba(0,0,30,0.55),inset 0 1px 0 rgba(255,255,255,0.1);}
-.rp-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(200,220,255,0.92);margin-bottom:6px;}
+.rp-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.rp-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(200,220,255,0.92);}
+.rp-status{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#4ade80;white-space:nowrap;}
+.rp-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:rp-pulse 1.6s ease-in-out infinite;}
+@keyframes rp-pulse{0%,100%{opacity:1;}50%{opacity:0.35;}}
 .rp-desc{font-size:10.5px;color:rgba(160,185,240,0.7);line-height:1.65;margin-bottom:10px;}
 .rp-score-row{display:flex;gap:6px;flex-wrap:wrap;}
 .rp-badge{font-size:10px;padding:4px 10px;border-radius:20px;font-weight:600;}
@@ -329,7 +333,7 @@ body{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg);color
 /* ── LIGHT THEME: P2, P3, P4 ── */
 body.light-theme { background:#f4f7fd; }
 
-#p2, #p3, #p4 {
+#p2, #p3, #p4, #p5 {
   --bg: #f4f7fd;
   --bg2: #0d1b2e;
   --bg3: #e6eef8;
@@ -390,8 +394,6 @@ body.light-theme { background:#f4f7fd; }
 
 /* PAGE 5 — 비교보고서 목록 */
 #p5{overflow:hidden;}
-#p5, #p5 * { --bg:#f4f7fd; --bg2:#0d1b2e; --bg3:#e6eef8; --card:#ffffff; --t1:#080e1a; --t2:#1e3a5f; --t3:#6688aa; --border:#ccd8ee; --border2:#aec0d8; }
-#p5{ background:#f4f7fd; color:#080e1a; }
 .rcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:15px 18px;margin-bottom:9px;cursor:pointer;transition:all .18s;display:flex;align-items:center;gap:14px;box-shadow:0 1px 8px rgba(13,27,46,.07);}
 .rcard:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(13,27,46,.13);}
 .rcard-badge{font-size:10px;padding:4px 12px;border-radius:20px;background:rgba(0,212,170,.12);color:#00d4aa;font-weight:600;flex-shrink:0;white-space:nowrap;}

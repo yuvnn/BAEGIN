@@ -1,4 +1,5 @@
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -7,13 +8,14 @@ TOP_CONFERENCES = [
     "CVPR", "ICCV", "ECCV", "AAAI", "NAACL",
     "SIGKDD", "IJCAI",
 ]
-HF_UPVOTE_THRESHOLD = 5
+HF_UPVOTE_THRESHOLD = int(os.getenv("HF_UPVOTE_THRESHOLD", "5"))
 
 
 def _has_conference_mention(paper: dict) -> bool:
     comment = paper.get("comment", "") or ""
     title = paper.get("title", "") or ""
-    text = (comment + " " + title).upper()
+    abstract = paper.get("abstract", "") or ""
+    text = (comment + " " + title + " " + abstract[:500]).upper()
     return any(conf.upper() in text for conf in TOP_CONFERENCES)
 
 

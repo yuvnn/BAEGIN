@@ -143,7 +143,7 @@ def generate_meta_review(keyword: str, reviews: List[Dict[str, Any]]) -> Evaluat
         result = json.loads(response.choices[0].message.content)
         
         final_score = result.get("final_score", 0.0)
-        accept = final_score >= 6.0
+        accept = final_score >= 5.0
         
         return EvaluationResult(
             is_relevant=accept,

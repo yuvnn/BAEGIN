@@ -9,19 +9,22 @@ logger = logging.getLogger(__name__)
 
 _ARXIV_ID_RE = re.compile(r"\d{4}\.\d{4,5}")
 
-_AI_CATEGORIES_QUERY = (
-    "cat:cs.AI OR cat:cs.LG OR cat:cs.CL OR cat:cs.CV "
-    "OR cat:cs.RO OR cat:cs.MA OR cat:cs.CY OR cat:stat.ML"
-)
+_ARXIV_CATEGORY_GROUPS = [
+    ["cat:cs.AI"],
+    ["cat:cs.LG", "cat:cs.CL"],
+    ["cat:cs.CV", "cat:cs.RO"],
+    ["cat:cs.MA", "cat:cs.CY", "cat:stat.ML"],
+]
 
 
-def fetch_arxiv_ai_papers(
-    last_run_dt: datetime | None = None, max_results: int = 1000
+def _fetch_arxiv_group(
+    categories: list[str],
+    date_filter: str,
+    max_results: int,
 ) -> list[dict]:
-    query = _AI_CATEGORIES_QUERY
-    if last_run_dt:
-        date_str = last_run_dt.strftime("%Y%m%d%H%M")
-        query = f"({_AI_CATEGORIES_QUERY}) AND submittedDate:[{date_str} TO *]"
+    query = " OR ".join(categories)
+    if date_filter:
+        query = f"({query}) AND submittedDate:[{date_filter} TO *]"
 
     client = arxiv.Client()
     search = arxiv.Search(
@@ -57,7 +60,26 @@ def fetch_arxiv_ai_papers(
                 }
             )
     except Exception as exc:
-        logger.error("arXiv fetch error: %s", exc)
+        logger.warning("arXiv fetch error for %s: %s — skipping group", categories, exc)
+    return papers
+
+
+def fetch_arxiv_ai_papers(
+    last_run_dt: datetime | None = None, max_results: int = 1000
+) -> list[dict]:
+    date_filter = last_run_dt.strftime("%Y%m%d0000") if last_run_dt else ""
+    per_group = max(max_results // len(_ARXIV_CATEGORY_GROUPS), 50)
+
+    seen_ids: set[str] = set()
+    papers = []
+    for group in _ARXIV_CATEGORY_GROUPS:
+        group_papers = _fetch_arxiv_group(group, date_filter, per_group)
+        for p in group_papers:
+            if p["paper_id"] not in seen_ids:
+                seen_ids.add(p["paper_id"])
+                papers.append(p)
+        logger.info("arXiv group %s: %d papers", group, len(group_papers))
+
     return papers
 
 
@@ -105,7 +127,7 @@ def fetch_hf_papers() -> list[dict]:
                 "url": url,
                 "pdf_url": pdf_url,
                 "arxiv_id": arxiv_id,
-                "upvotes": item.get("likes", 0),
+                "upvotes": paper.get("upvotes", 0),
             }
         )
     return papers

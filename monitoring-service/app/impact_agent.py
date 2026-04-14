@@ -10,7 +10,7 @@ from langchain_openai import ChatOpenAI
 
 logger = logging.getLogger(__name__)
 
-IMPACT_THRESHOLD = int(os.getenv("IMPACT_THRESHOLD", "80"))
+IMPACT_THRESHOLD = int(os.getenv("IMPACT_THRESHOLD", "50"))
 
 _SYSTEM_PROMPT = """\
 You are an AI research impact evaluator.
@@ -102,7 +102,8 @@ def score_papers(papers: list[dict]) -> list[dict]:
     scored = []
     for paper in papers:
         scored.append(_score_one(agent, paper))
-        logger.debug("Scored '%s': %d", paper.get("title", "")[:60], scored[-1]["impact_score"])
+        p = scored[-1]
+        logger.info("Scored [%d] reason=%s | %s", p["impact_score"], p["impact_reason"][:80], p.get("title", "")[:60])
 
     logger.info(
         "impact_agent: scored %d papers, %d >= threshold(%d)",

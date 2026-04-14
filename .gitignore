@@ -17,6 +17,15 @@ dist/
 
 # Java / Maven build outputs
 target/
+**/target/
+**/.gradle/
+**/build/
+**/bin/
+
+# Runtime data
+data/kafka/
+data/chroma/
+data/reports/
 
 # IDE / editor files
 .idea/

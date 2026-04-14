@@ -32,6 +32,8 @@ services:
 
   internal-service:
     build: ./internal-service
+    env_file:
+      - ./.env
     environment:
       - CHROMA_HOST=chroma
       - CHROMA_PORT=8000

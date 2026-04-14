@@ -129,6 +129,7 @@ const realPapersLoading = ref(false)
 const activeRealIdx = ref(null)
 const scanning = ref(false)
 const scanResult = ref(null)
+let pollTimer = null
 
 async function triggerScan() {
   scanning.value = true
@@ -136,9 +137,9 @@ async function triggerScan() {
   try {
     const res = await axios.post('http://localhost:18085/monitor/run', { max_results: 50 }, { timeout: 120000 })
     scanResult.value = res.data
-    if (res.data.kafka_published > 0) {
-      setTimeout(() => fetchPapers(15).then(d => { realPapers.value = d }), 5000)
-    }
+    // 항상 목록 갱신 — kafka_published=0이어도 이전 실행 결과가 ChromaDB에 있을 수 있음
+    const delay = res.data.kafka_published > 0 ? 5000 : 1000
+    setTimeout(() => fetchPapers(15).then(d => { realPapers.value = d }), delay)
   } catch {
     scanResult.value = { error: true }
   } finally {
@@ -431,9 +432,15 @@ onMounted(() => {
   }).finally(() => {
     realPapersLoading.value = false
   })
+
+  // 30초마다 자동 갱신
+  pollTimer = setInterval(() => {
+    fetchPapers(15).then(data => { realPapers.value = data }).catch(() => {})
+  }, 30000)
 })
 
 onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
   if (animId) cancelAnimationFrame(animId)
   window.removeEventListener('resize', resizeV)
 })

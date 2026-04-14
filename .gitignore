@@ -1,75 +1,23 @@
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment files
-.env
-*.env
-!.env.example
-
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.so
-.python-version
-.venv/
-venv/
-env/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.hypothesis/
-.ipynb_checkpoints/
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
-build/
-site/
-*.egg-info/
-
-# Node / frontend
-node_modules/
-dist/
-coverage/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.pnpm-store/
-.npm/
-.yarn/
-.parcel-cache/
-.vite/
-*.tsbuildinfo
-
-# Java / Maven
+# Java / Maven / Gradle
 target/
 **/target/
 *.class
 out/
+bin/
+**/bin/
+.gradle/
+**/.gradle/
+build/
+**/build/
 
-# Runtime / local data
+# Runtime / Local Data
+# 실제 데이터가 담긴 폴더는 깃 관리에서 제외합니다.
+data/kafka/
 data/chroma/
 data/reports/
-data/kafka/
 local_chroma_test_db/
 
 # IDE / editor
 .idea/
 .vscode/
 *.iml
-
-# Logs and temp
-*.log
-*.tmp
-*.swp
-*.swo
-
-# 개인 파일
-troubleshooting.md
-troubleshooting_template.md
-vue-project/src/views/DashboardView.vue

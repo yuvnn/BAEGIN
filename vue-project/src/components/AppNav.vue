@@ -1,0 +1,70 @@
+<template>
+  <nav class="nav">
+    <div class="nav-logo" @click="onLogoClick">baggin'</div>
+    <div class="nav-links">
+      <button class="nav-btn" :class="{ on: store.currentPage === 'p1' }" @click="store.go('p1')">탐색</button>
+      <span class="nav-sep">|</span>
+      <button class="nav-btn" :class="{ on: store.currentPage === 'p2' || store.currentPage === 'p3' }" @click="store.go('p2')">논문리스트</button>
+      <span class="nav-sep">|</span>
+      <button class="nav-btn" :class="{ on: store.currentPage === 'p5' || store.currentPage === 'p4' }" @click="store.go('p5')">비교보고서</button>
+    </div>
+    <div class="search-box">
+      <input
+        type="text"
+        v-model="searchInput"
+        placeholder="논문 검색..."
+        @keydown.enter="doSearch"
+      />
+      <button class="btn-s" @click="doSearch">검색</button>
+      <div class="prof-wrap" ref="profWrapRef">
+        <button class="prof-btn" @click="toggleProf" title="프로필">KG</button>
+        <div class="prof-drop" :class="{ open: profOpen }">
+          <div class="prof-info">
+            <div class="prof-avatar">KG</div>
+            <div>
+              <div class="prof-name">김규리</div>
+              <div class="prof-email">gyuri.kim@baggin.ai</div>
+            </div>
+          </div>
+          <div class="prof-item"><span class="prof-item-icon">⚙</span>설정</div>
+          <div class="prof-item"><span class="prof-item-icon">🔔</span>알림</div>
+          <div class="prof-item"><span class="prof-item-icon">📁</span>내 문서</div>
+          <div class="prof-div"></div>
+          <div class="prof-item prof-logout"><span class="prof-item-icon">→</span>로그아웃</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</template>
+
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
+import { store } from '../store.js'
+
+const searchInput = ref('')
+const profOpen = ref(false)
+const profWrapRef = ref(null)
+
+function onLogoClick() {
+  store.p1ModalOpen = false
+  store.go('p1')
+}
+
+function doSearch() {
+  const q = searchInput.value.trim()
+  store.doSearch(q)
+}
+
+function toggleProf() {
+  profOpen.value = !profOpen.value
+}
+
+function onDocClick(e) {
+  if (profWrapRef.value && !profWrapRef.value.contains(e.target)) {
+    profOpen.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', onDocClick))
+onUnmounted(() => document.removeEventListener('click', onDocClick))
+</script>

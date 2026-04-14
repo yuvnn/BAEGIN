@@ -1,25 +1,20 @@
 <template>
-  <main class="container">
-    <h1>Paper Monitoring Platform</h1>
-    <p class="sub">논문 요약 및 사내 문서 비교 템플릿</p>
-    <DashboardView />
-  </main>
+  <AppNav />
+  <P1View v-show="store.currentPage === 'p1'" />
+  <P2View v-show="store.currentPage === 'p2'" />
+  <P3View v-show="store.currentPage === 'p3'" />
+  <P4View v-show="store.currentPage === 'p4'" />
+  <P5View v-show="store.currentPage === 'p5'" />
+  <ChatBot />
 </template>
 
 <script setup>
-import DashboardView from "./views/DashboardView.vue";
+import { store } from './store.js'
+import AppNav from './components/AppNav.vue'
+import ChatBot from './components/ChatBot.vue'
+import P1View from './views/P1View.vue'
+import P2View from './views/P2View.vue'
+import P3View from './views/P3View.vue'
+import P4View from './views/P4View.vue'
+import P5View from './views/P5View.vue'
 </script>
-
-<style scoped>
-.container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 24px;
-  font-family: "Pretendard", "Noto Sans KR", sans-serif;
-}
-
-.sub {
-  color: #4b5563;
-  margin-bottom: 20px;
-}
-</style>

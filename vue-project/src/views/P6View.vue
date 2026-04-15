@@ -25,7 +25,7 @@
           <div class="p6-stat-label">AIRA F1 Score<br><span style="font-size:11px;color:var(--t3)">인간 평균(0.49) 상회</span></div>
         </div>
         <div class="p6-stat-card">
-          <div class="p6-stat-val">6.0</div>
+          <div class="p6-stat-val">5.0</div>
           <div class="p6-stat-label">Accept 임계값<br><span style="font-size:11px;color:var(--t3)">이상이면 학술적 가치 인정</span></div>
         </div>
       </div>

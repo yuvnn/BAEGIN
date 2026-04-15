@@ -6,3 +6,4 @@ SQLAlchemy==2.0.36
 pymysql==1.1.1
 cryptography==43.0.3
 httpx<0.28.0
+chromadb==0.5.23

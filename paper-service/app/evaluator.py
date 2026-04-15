@@ -144,11 +144,15 @@ def generate_meta_review(keyword: str, reviews: List[Dict[str, Any]]) -> Evaluat
         
         final_score = result.get("final_score", 0.0)
         accept = final_score >= 5.0
-        
+
+        final_decision = result.get("final_decision", "Reject")
+        if final_decision == "Borderline":
+            final_decision = "Weak Accept" if final_score >= 5.0 else "Weak Reject"
+
         return EvaluationResult(
             is_relevant=accept,
             score=final_score,
-            decision=result.get("final_decision", "Reject"),
+            decision=final_decision,
             review=result.get("meta_review", "No meta-review generated.")
         )
     except Exception as e:

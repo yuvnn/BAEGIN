@@ -2,8 +2,19 @@ import os
 import json
 import logging
 from sqlalchemy import create_engine, text
+import chromadb
 
 logger = logging.getLogger(__name__)
+
+_chroma_client = None
+
+def get_chroma_client():
+    global _chroma_client
+    if _chroma_client is None:
+        host = os.getenv("CHROMA_HOST", "chroma")
+        port = int(os.getenv("CHROMA_PORT", "8000"))
+        _chroma_client = chromadb.HttpClient(host=host, port=port)
+    return _chroma_client
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -59,6 +70,86 @@ def fetch_paper_context(limit: int = 30) -> list[dict]:
         return papers
     except Exception as e:
         logger.error(f"Failed to fetch paper context: {e}")
+        return []
+
+
+def fetch_internal_doc_context(limit: int = 10) -> list[dict]:
+    """
+    ChromaDB internal_docs 컬렉션에서 사내 문서 목록을 가져옵니다.
+    doc_id 기준으로 중복 제거 후 대표 청크만 반환합니다.
+    """
+    try:
+        client = get_chroma_client()
+        collection_name = os.getenv("CHROMA_COLLECTION_INTERNAL", "internal_docs")
+        collection = client.get_or_create_collection(collection_name)
+
+        results = collection.get(include=["documents", "metadatas"], limit=200)
+        docs_map: dict[str, dict] = {}
+
+        documents = results.get("documents") or []
+        metadatas = results.get("metadatas") or []
+
+        for doc_text, meta in zip(documents, metadatas):
+            if not meta:
+                continue
+            doc_id = meta.get("doc_id", "unknown")
+            if doc_id not in docs_map:
+                docs_map[doc_id] = {
+                    "doc_id": doc_id,
+                    "title": meta.get("title", doc_id),
+                    "source_file": meta.get("source_file", ""),
+                    "source_type": meta.get("source_type", "internal"),
+                    "excerpt": (doc_text or "")[:300].replace("\n", " "),
+                }
+
+        return list(docs_map.values())[:limit]
+    except Exception as e:
+        logger.error(f"Failed to fetch internal doc context: {e}")
+        return []
+
+
+def fetch_report_context(limit: int = 20) -> list[dict]:
+    """
+    MariaDB report 테이블에서 생성된 비교 보고서 목록을 가져옵니다.
+    챗봇이 "어떤 보고서가 있나요?" 류 질문에 답할 수 있도록 메타데이터를 반환합니다.
+    """
+    try:
+        engine = get_engine()
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT report_id, paper_id, internal_doc_id, status, "
+                    "updated_at, report_json "
+                    "FROM report ORDER BY updated_at DESC LIMIT :lim"
+                ),
+                {"lim": limit},
+            ).fetchall()
+
+        reports = []
+        for row in rows:
+            report_id, paper_id, internal_doc_id, status, updated_at, report_json = row
+            title = None
+            overview = None
+            try:
+                import json as _json
+                rj = _json.loads(report_json or "{}")
+                title = rj.get("report", {}).get("title")
+                sections = rj.get("report", {}).get("sections", {})
+                overview = (sections.get("overview_summary") or "")[:200].replace("\n", " ")
+            except Exception:
+                pass
+            reports.append({
+                "report_id": report_id,
+                "paper_id": paper_id,
+                "internal_doc_id": internal_doc_id,
+                "status": status,
+                "title": title or report_id,
+                "overview_excerpt": overview or "",
+                "updated_at": updated_at.isoformat() if updated_at else None,
+            })
+        return reports
+    except Exception as e:
+        logger.error(f"Failed to fetch report context: {e}")
         return []
 
 

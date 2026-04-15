@@ -79,7 +79,30 @@ const messages = ref([])
 const msgsRef = ref(null)
 const inputRef = ref(null)
 
-const chips = ['최신 논문 추천해줘', 'NLP 관련 논문 알려줘', '강화학습 논문 있어?', '사용 방법 알려줘']
+const ALL_CHIPS = [
+  '최신 최고 점수 논문 추천',
+  '관심 분야 최신 논문 추천',
+  '사내 문서 등록 현황',
+  '생성된 비교 보고서 목록',
+  '사내 문서와 연관된 논문 알려줘',
+  '카테고리별 논문 현황 알려줘',
+  'AIRA 8점 이상 논문만 추천',
+  'AIRA 평가 기준 설명해줘',
+]
+
+function buildChips() {
+  const kws = store.user?.keywords || []
+  // 키워드 있으면 맞춤 칩을 맨 앞에, 나머지 3개는 ALL_CHIPS 앞부분
+  if (kws.length > 0) {
+    const kwChip = `${kws.slice(0, 2).join(', ')} 관련 논문 추천해줘`
+    return [kwChip, ...ALL_CHIPS.slice(0, 3)]
+  }
+  // 없으면 전체 칩에서 4개 무작위 선택 (매번 다른 조합)
+  const shuffled = [...ALL_CHIPS].sort(() => Math.random() - 0.5)
+  return shuffled.slice(0, 4)
+}
+
+const chips = buildChips()
 
 function scrollBottom() {
   nextTick(() => {
@@ -106,7 +129,10 @@ async function callChatbot(question) {
     const res = await fetch(CHATBOT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({
+        question,
+        user_keywords: store.user?.keywords || [],
+      }),
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return await res.json()
@@ -164,11 +190,19 @@ function toggleChat() {
   if (isOpen.value && !initialized.value) {
     initialized.value = true
     setTimeout(() => {
-      addMessage({
-        role: 'bot',
-        type: 'text',
-        text: "안녕하세요! 👋 baggin' AI입니다.\n논문 검색, 요약, 비교 분석을 도와드릴게요. 무엇이 궁금하신가요?",
-      })
+      const kws = store.user?.keywords || []
+      const name = store.user?.name ? `, ${store.user.name}님` : ''
+
+      let greeting = `안녕하세요${name}! baggin' AI입니다.\n논문 검색, 요약, 비교 분석을 도와드릴게요.`
+
+      if (kws.length > 0) {
+        const kwStr = kws.slice(0, 3).join(', ')
+        greeting += `\n\n등록하신 관심 키워드(${kwStr})를 기반으로 관련 논문을 바로 추천해드릴 수 있어요. 아래 버튼을 눌러보세요!`
+      } else {
+        greeting += `\n\n관심 키워드를 설정하시면 맞춤 논문을 선제적으로 추천해드릴 수 있어요.`
+      }
+
+      addMessage({ role: 'bot', type: 'text', text: greeting })
     }, 200)
   }
   if (isOpen.value) setTimeout(() => inputRef.value?.focus(), 250)

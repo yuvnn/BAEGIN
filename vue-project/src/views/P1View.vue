@@ -13,7 +13,7 @@
           </div>
           <div class="rp-desc">3인 심사 앙상블<br>+ 반성 루프 + Area Chair</div>
           <div class="rp-score-row">
-            <span class="rp-badge accept">≥ 6.0 Accept</span>
+            <span class="rp-badge accept">≥ 5.0 Accept</span>
             <span class="rp-badge range">AIRA 1~10</span>
           </div>
           <div class="rp-hint">클릭하여 자세히 보기 →</div>
@@ -51,7 +51,7 @@
               </div>
               <div class="modal-stat">
                 <div class="modal-stat-label">판정</div>
-                <div class="modal-stat-value" style="color:#c8d4ff;font-size:11px">{{ modal.decision }}</div>
+                <div class="modal-stat-value" :style="{ color: decisionColor(modal.decision), fontSize: '11px' }">{{ modal.decision }}</div>
               </div>
               <div class="modal-stat">
                 <div class="modal-stat-label">카테고리</div>
@@ -340,19 +340,38 @@ function goToCategory(catName) {
 function sc(s) { return s >= 85 ? '#ff8c42' : s >= 70 ? '#ffb470' : 'rgba(140,160,200,0.7)' }
 function scc(s) { return s >= 85 ? 'sh' : s >= 70 ? 'sm' : 'sl' }
 
-// AIRA Score helpers
+// AIRA 5-tier helpers — threshold=5.0, 5 equal intervals up to 10
+const ACCEPT_THRESHOLD = 5.0
+const AIRA_TIER_COLORS = ['#4f8ef5', '#00d4aa', '#f59e0b', '#ff7b45', '#8b5cf6']
+const AIRA_TIER_CLASSES = ['s-t1', 's-t2', 's-t3', 's-t4', 's-t5']
+
+function _airaTierIdx(score) {
+  if (score == null || score < ACCEPT_THRESHOLD) return -1
+  const step = (10 - ACCEPT_THRESHOLD) / 5
+  const idx = Math.floor((10 - score) / step)
+  return Math.min(Math.max(idx, 0), 4)
+}
 function airaScc(score) {
-  if (score == null) return 'sl'
-  return score >= 7 ? 'sh' : score >= 6 ? 'sm' : 'sl'
+  const i = _airaTierIdx(score)
+  return i >= 0 ? AIRA_TIER_CLASSES[i] : 's-t0'
+}
+function airaScoreColor(score) {
+  const i = _airaTierIdx(score)
+  return i >= 0 ? AIRA_TIER_COLORS[i] : 'rgba(140,160,200,0.5)'
 }
 function airaTbarStyle(score) {
   const pct = score != null ? (score / 10 * 100) : 0
-  const color = score != null && score >= 6 ? '#4f8ef5' : 'rgba(140,160,200,0.4)'
-  return { width: pct + '%', background: color }
+  return { width: pct + '%', background: airaScoreColor(score) }
 }
-function airaScoreColor(score) {
-  if (score == null) return 'rgba(140,160,200,0.7)'
-  return score >= 7 ? '#ff8c42' : score >= 6 ? '#ffb470' : 'rgba(140,160,200,0.7)'
+function decisionColor(decision) {
+  const map = {
+    'Accept': '#4f8ef5',
+    'Weak Accept': '#00d4aa',
+    'Borderline': '#f59e0b',
+    'Weak Reject': '#ff7b45',
+    'Reject': '#8b5cf6',
+  }
+  return map[decision] || '#c8d4ff'
 }
 
 function openModal(idx) {

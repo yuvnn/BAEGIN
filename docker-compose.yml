@@ -33,6 +33,8 @@ services:
         condition: service_started
       user-service:
         condition: service_started
+      paper-service:
+        condition: service_healthy
 
   auth-server:
     build: ./auth-server
@@ -85,6 +87,12 @@ services:
         condition: service_healthy
       mariadb:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   internal-service:
     build: ./internal-service
@@ -97,6 +105,7 @@ services:
       - CHROMA_COLLECTION_INTERNAL=internal_docs
       - CHROMA_COLLECTION_REPORTS=reports
       - DATABASE_URL=mysql+pymysql://baegin_user:baegin_password@mariadb:3306/baegin_db
+      - PAPER_SERVICE_URL=http://paper-service:8000
     ports:
       - "18084:8000"
     volumes:

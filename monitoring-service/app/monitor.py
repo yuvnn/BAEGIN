@@ -1,5 +1,6 @@
 import logging
 import re
+import time
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -9,6 +10,10 @@ import requests
 logger = logging.getLogger(__name__)
 
 _ARXIV_ID_RE = re.compile(r"\d{4}\.\d{4,5}")
+
+# 단일 클라이언트를 공유해 요청 간 딜레이가 누적 추적됨
+# delay_seconds=5: 요청 사이 최소 5초 대기 (기본값 3초보다 보수적)
+_ARXIV_CLIENT = arxiv.Client(page_size=100, delay_seconds=5, num_retries=3)
 
 _ARXIV_CATEGORY_GROUPS = [
     ["cat:cs.AI"],
@@ -31,7 +36,6 @@ def _fetch_arxiv_group(
         if date_filter:
             query = f"({query}) AND submittedDate:[{date_filter} TO *]"
 
-    client = arxiv.Client()
     search = arxiv.Search(
         query=query,
         max_results=max_results,
@@ -39,7 +43,7 @@ def _fetch_arxiv_group(
     )
     papers = []
     try:
-        for result in client.results(search):
+        for result in _ARXIV_CLIENT.results(search):
             entry_id = result.entry_id
             match = _ARXIV_ID_RE.search(entry_id)
             arxiv_id = match.group() if match else entry_id
@@ -81,7 +85,9 @@ def fetch_arxiv_ai_papers(
 
     seen_ids: set[str] = set()
     papers = []
-    for group in _ARXIV_CATEGORY_GROUPS:
+    for i, group in enumerate(_ARXIV_CATEGORY_GROUPS):
+        if i > 0:
+            time.sleep(10)  # 그룹 간 10초 대기 — 429 방지
         group_papers = _fetch_arxiv_group(group, date_filter, per_group)
         for p in group_papers:
             if p["paper_id"] not in seen_ids:

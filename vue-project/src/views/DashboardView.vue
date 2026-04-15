@@ -21,9 +21,8 @@
           <span class="compare-label">사내 비교 문서</span>
           <div class="compare-actions">
             <button class="compare-act-btn" type="button" :disabled="reportLoading" @click="runFixedCompare">
-              {{ reportLoading ? "순차 실행 중..." : "고정 ID 비교 실행" }}
+              {{ reportLoading ? "생성 중..." : "재생성하기" }}
             </button>
-            <button class="compare-act-btn sec" type="button" @click="loadLatestReport">최신 JSON 불러오기</button>
             <button class="compare-act-btn" type="button">내보내기 ↗</button>
             <button class="compare-act-btn sec" type="button">저장</button>
           </div>
@@ -241,19 +240,6 @@
                 <iframe :src="internalPdfUrl" class="doc-embed-frame" title="Internal PDF" loading="lazy"></iframe>
               </div>
               <p v-else>사내문서 PDF 경로를 찾지 못했습니다.</p>
-
-              <template v-if="viewerCitation">
-                <p><strong>source:</strong> {{ readableSourceName(viewerCitation) }}</p>
-                <div class="doc-highlight-box">
-                  <div class="doc-hl-title">source_text</div>
-                  <p class="doc-raw">
-                    <span>{{ citationSegments.before }}</span>
-                    <mark class="citation-mark">{{ citationSegments.highlight || '' }}</mark>
-                    <span>{{ citationSegments.after }}</span>
-                  </p>
-                </div>
-                <p>범위: {{ viewerCitation.char_start ?? '-' }} ~ {{ viewerCitation.char_end ?? '-' }}</p>
-              </template>
             </div>
 
             <div class="rpt-overview" style="padding:12px;margin-top:12px;">
@@ -280,7 +266,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { getReportStreamUrl, startReportGeneration } from "../api/reportService";
+import { getReportStreamUrl, startReportGeneration, listInternalDocs, getReportList, getReportById } from "../api/reportService";
 
 const rootEl = ref(null);
 const bgCanvasEl = ref(null);
@@ -302,8 +288,7 @@ const sectionStatuses = ref({
 });
 
 const FIXED_PAPER_ID = "paper-demo-001";
-const FIXED_INTERNAL_DOC_ID = "internal-b482da9a0b960bde";
-const FIXED_INTERNAL_PDF_FILE = "Web_Service_개발_Mini-Project.pdf";
+const activeInternalDoc = ref(null); // { doc_id, source_file, title } — API에서 동적 로드
 const DUMMY_PAPER_ORIGINAL_URL = "https://arxiv.org/pdf/2604.08626";
 const DUMMY_PAPER_SUMMARY_MD = `## 문제 정의
 
@@ -331,39 +316,44 @@ const DUMMY_PAPER_SUMMARY_MD = `## 문제 정의
 - 데이터 편향 가능성
 - 실시간 처리 최적화 필요`;
 
-const DEFAULT_CITATIONS = [
-  {
-    citation_id: "fallback-paper-1",
-    source_type: "paper",
-    source_id: FIXED_PAPER_ID,
-    source_text: DUMMY_PAPER_SUMMARY_MD,
-    text_quote: null,
-    char_start: null,
-    char_end: null,
-    anchor: "paper_tech_1",
-    metadata: {
-      title: "WildDet3D: Open-Vocabulary Monocular 3D Object Detection in the Wild",
-      paper_url: DUMMY_PAPER_ORIGINAL_URL,
-      category: "ML Foundation",
+const defaultCitations = computed(() => {
+  const list = [
+    {
+      citation_id: "fallback-paper-1",
+      source_type: "paper",
+      source_id: FIXED_PAPER_ID,
+      source_text: DUMMY_PAPER_SUMMARY_MD,
+      text_quote: null,
+      char_start: null,
+      char_end: null,
+      anchor: "paper_tech_1",
+      metadata: {
+        title: "WildDet3D: Open-Vocabulary Monocular 3D Object Detection in the Wild",
+        paper_url: DUMMY_PAPER_ORIGINAL_URL,
+        category: "ML Foundation",
+      },
     },
-  },
-  {
-    citation_id: "fallback-internal-1",
-    source_type: "internal",
-    source_id: FIXED_INTERNAL_DOC_ID,
-    source_text: "-",
-    text_quote: null,
-    char_start: null,
-    char_end: null,
-    anchor: "int_req_1",
-    metadata: {
-      title: "Web Service 개발 Mini-Project",
-      doc_id: FIXED_INTERNAL_DOC_ID,
-      source_file: FIXED_INTERNAL_PDF_FILE,
-      source_ext: ".pdf",
-    },
-  },
-];
+  ];
+  if (activeInternalDoc.value) {
+    list.push({
+      citation_id: "fallback-internal-1",
+      source_type: "internal",
+      source_id: activeInternalDoc.value.doc_id,
+      source_text: "-",
+      text_quote: null,
+      char_start: null,
+      char_end: null,
+      anchor: "int_req_1",
+      metadata: {
+        title: activeInternalDoc.value.title || "",
+        doc_id: activeInternalDoc.value.doc_id,
+        source_file: activeInternalDoc.value.source_file || "",
+        source_ext: ".pdf",
+      },
+    });
+  }
+  return list;
+});
 let resizeHandler = null;
 let eventSource = null;
 let lastStreamEventAt = 0;
@@ -394,7 +384,7 @@ const SKELETON_SECTION_CODES = [
 const fallbackOverview = "최신 리포트가 없어서 기본 화면을 표시합니다.";
 const citationList = computed(() => {
   const fromReport = latestReport.value?.citations || [];
-  return fromReport.length > 0 ? fromReport : DEFAULT_CITATIONS;
+  return fromReport.length > 0 ? fromReport : defaultCitations.value;
 });
 
 const reportSections = computed(() => {
@@ -435,7 +425,7 @@ function makeEmptyReport(reportId) {
   return {
     report_id: reportId,
     paper_id: FIXED_PAPER_ID,
-    internal_doc_id: FIXED_INTERNAL_DOC_ID,
+    internal_doc_id: activeInternalDoc.value?.doc_id || null,
     status: "running",
     report: {
       title: "논문-기획서 비교 분석 보고서",
@@ -792,7 +782,9 @@ const internalPdfUrl = computed(() => {
 
   const docId = metadata.doc_id ? String(metadata.doc_id) : latestReport.value?.internal_doc_id;
   if (docId) return `${base}/assets/internal-docs/by-doc/${encodeURIComponent(docId)}`;
-  return `${base}/assets/internal-docs/${encodeURIComponent(FIXED_INTERNAL_PDF_FILE)}`;
+  return activeInternalDoc.value?.source_file
+    ? `${base}/assets/internal-docs/${encodeURIComponent(activeInternalDoc.value.source_file)}`
+    : `${base}/assets/internal-docs/`;
 });
 
 function readableCitationLabel(citation, idx) {
@@ -848,9 +840,17 @@ async function runFixedCompare() {
   reportError.value = "";
   resetSectionStatuses();
   try {
+    // activeInternalDoc이 없으면 그 자리에서 다시 로드
+    if (!activeInternalDoc.value) {
+      const docs = await listInternalDocs();
+      if (docs.length > 0) {
+        activeInternalDoc.value = { doc_id: docs[0].doc_id, source_file: docs[0].source_file || "", title: docs[0].title || "" };
+      }
+    }
+    if (!activeInternalDoc.value) throw new Error("사내문서가 없습니다. data/internal_docs 폴더에 PDF를 추가해주세요.");
     const accepted = await startReportGeneration({
       paper_id: FIXED_PAPER_ID,
-      internal_doc_id: FIXED_INTERNAL_DOC_ID,
+      internal_doc_id: activeInternalDoc.value.doc_id,
     });
     latestReport.value = makeEmptyReport(accepted.report_id);
     activeCitation.value = null;
@@ -862,12 +862,17 @@ async function runFixedCompare() {
   }
 }
 
-async function loadLatestReport(raiseOnFail = false) {
+async function loadLatestReport() {
   try {
-    await runFixedCompare();
-  } catch (error) {
-    if (raiseOnFail) throw error;
-  }
+    const reports = await getReportList(1);
+    if (reports.length > 0) {
+      const data = await getReportById(reports[0].report_id);
+      latestReport.value = data;
+      completeAllSectionStatuses();
+      return;
+    }
+  } catch {}
+  await runFixedCompare();
 }
 
 function switchTab(tabId) {
@@ -898,10 +903,19 @@ function drawBackground() {
   ctx.fillRect(0, 0, width, height);
 }
 
-onMounted(() => {
+onMounted(async () => {
   drawBackground();
   resizeHandler = () => drawBackground();
   window.addEventListener("resize", resizeHandler);
+
+  // 사내문서 목록 로드 → 첫 번째 문서를 기본으로 사용
+  try {
+    const docs = await listInternalDocs();
+    if (docs.length > 0) {
+      activeInternalDoc.value = { doc_id: docs[0].doc_id, source_file: docs[0].source_file || "", title: docs[0].title || "" };
+    }
+  } catch {}
+
   loadLatestReport();
 });
 
@@ -930,15 +944,19 @@ body,
 .tab.active { color: #dde5ff; font-weight: 500; }
 .searchbox { display: flex; align-items: center; gap: 7px; background: rgba(255,255,255,.05); border-radius: 20px; padding: 6px 15px; font-size: 11px; color: rgba(148,164,208,.6); }
 
-.body { position: relative; z-index: 10; display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 0; }
-.compare-left { display: flex; flex-direction: column; border-right: .5px solid rgba(255,255,255,.06); overflow: hidden; }
+.body { position: relative; z-index: 10; display: grid; grid-template-columns: 1fr 1fr; flex: 1; min-height: 0; height: 0; }
+.compare-left { display: flex; flex-direction: column; border-right: .5px solid rgba(255,255,255,.06); overflow: hidden; min-height: 0; }
 .compare-left-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; border-bottom: .5px solid rgba(255,255,255,.06); }
 .compare-label { font-family: "Syne", sans-serif; font-size: 12px; font-weight: 700; color: rgba(220,230,255,.7); }
 .compare-actions { display: flex; gap: 8px; }
 .compare-act-btn { font-size: 11px; padding: 6px 14px; border-radius: 20px; border: 0; background: rgba(37,99,235,.2); color: rgba(180,205,255,.85); cursor: pointer; }
 .compare-act-btn.sec { background: rgba(255,255,255,.06); color: rgba(160,180,230,.65); }
-.compare-doc-area { flex: 1; overflow: hidden; }
-.compare-doc-scroll { height: 100%; overflow-y: auto; padding: 22px 24px; }
+.compare-doc-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+.compare-doc-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 22px 24px; }
+.compare-doc-scroll::-webkit-scrollbar { width: 5px; }
+.compare-doc-scroll::-webkit-scrollbar-track { background: transparent; }
+.compare-doc-scroll::-webkit-scrollbar-thumb { background: rgba(37,99,235,.35); border-radius: 4px; }
+.compare-doc-scroll::-webkit-scrollbar-thumb:hover { background: rgba(37,99,235,.6); }
 
 .rpt-overview { background: rgba(37,99,235,.1); border-radius: 16px; padding: 20px 22px; margin-bottom: 24px; }
 .rpt-overview-title { font-family: "Syne", sans-serif; font-size: 14px; font-weight: 700; color: rgba(220,232,255,.92); margin-bottom: 10px; }
@@ -1066,12 +1084,16 @@ body,
 .link-arrow { font-size: 9px; color: rgba(37,99,235,.5); margin-left: 6px; opacity: 0; transition: opacity .15s; }
 .linkable:hover .link-arrow { opacity: 1; }
 
-.compare-right { display: flex; flex-direction: column; overflow: hidden; background: rgba(255,255,255,.02); }
+.compare-right { display: flex; flex-direction: column; overflow: hidden; background: rgba(255,255,255,.02); min-height: 0; }
 .doc-tabs { display: flex; gap: 0; padding: 12px 22px 0; border-bottom: .5px solid rgba(255,255,255,.07); }
 .doc-tab { font-size: 11px; padding: 8px 18px; border-radius: 12px 12px 0 0; border: 0; background: transparent; color: rgba(140,160,210,.45); cursor: pointer; margin-right: 2px; }
 .doc-tab.active { background: rgba(255,255,255,.07); color: rgba(215,228,255,.9); }
-.doc-viewer { flex: 1; overflow: hidden; }
-.doc-content { height: 100%; overflow-y: auto; padding: 24px 26px; }
+.doc-viewer { flex: 1; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+.doc-content { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 26px; }
+.doc-content::-webkit-scrollbar { width: 5px; }
+.doc-content::-webkit-scrollbar-track { background: transparent; }
+.doc-content::-webkit-scrollbar-thumb { background: rgba(37,99,235,.35); border-radius: 4px; }
+.doc-content::-webkit-scrollbar-thumb:hover { background: rgba(37,99,235,.6); }
 .doc-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
 .doc-meta-tag { font-size: 9.5px; padding: 3px 10px; border-radius: 10px; background: rgba(255,255,255,.09); color: rgba(190,210,255,.8); }
 .doc-meta-date, .doc-meta-author { font-size: 9.5px; color: rgba(130,150,200,.45); }

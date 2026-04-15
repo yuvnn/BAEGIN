@@ -5,6 +5,7 @@ import tempfile
 import uuid
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote
 
 import pymupdf4llm
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
@@ -68,9 +69,14 @@ def _extract_pdf_text(file_bytes: bytes, filename: str) -> str:
 # ── ChromaDB 인제스트 헬퍼 ─────────────────────────────────────
 def _ingest_doc_to_chroma(doc_id: str, title: str, text: str, source_file: str = "") -> int:
     """텍스트를 청킹·임베딩 후 ChromaDB internal_docs 저장. 청크 수 반환."""
+    logger.info("[ingest] 시작: doc_id=%s title='%s' source='%s' text_len=%d",
+                doc_id, title, source_file, len(text))
     chunks = chunk_text(text)
     if not chunks:
+        logger.warning("[ingest] 청크 없음 — 저장 건너뜀: doc_id=%s", doc_id)
         return 0
+    logger.info("[ingest] 청킹 완료: %d개 청크 생성", len(chunks))
+
     embeddings = embed_chunks(chunks)
     meta = build_metadata(doc_id, "internal", title)
     if source_file:
@@ -82,10 +88,12 @@ def _ingest_doc_to_chroma(doc_id: str, title: str, text: str, source_file: str =
     )
     try:
         col.delete(where={"doc_id": doc_id})
+        logger.debug("[ingest] 기존 벡터 삭제 완료: doc_id=%s", doc_id)
     except Exception:
         pass
     col.add(ids=ids, documents=chunks, embeddings=embeddings,
             metadatas=[meta for _ in chunks])
+    logger.info("[ingest] ChromaDB 저장 완료: doc_id=%s chunks=%d", doc_id, len(chunks))
     return len(chunks)
 
 
@@ -112,13 +120,16 @@ def _upsert_internal_doc_db(db: Session, doc_id: str, title: str, text: str,
 def _seed_internal_docs_from_dir() -> None:
     """INTERNAL_DOCS_DIR 내 모든 PDF를 자동 시딩 (파일명 → title, 해시 → doc_id)."""
     pdf_files = list(INTERNAL_DOCS_DIR.glob("*.pdf"))
+    logger.info("[seed] 시딩 시작: 디렉토리=%s, PDF 파일 %d개 발견", INTERNAL_DOCS_DIR, len(pdf_files))
     if not pdf_files:
+        logger.warning("[seed] PDF 없음 — 시딩 건너뜀")
         return
 
     col = get_chroma_client().get_or_create_collection(
         os.getenv("CHROMA_COLLECTION_INTERNAL", "internal_docs")
     )
     db = SessionLocal()
+    seeded, skipped, failed = 0, 0, 0
     try:
         for pdf_path in pdf_files:
             doc_id = "internal-" + hashlib.md5(pdf_path.name.encode()).hexdigest()[:16]
@@ -126,20 +137,26 @@ def _seed_internal_docs_from_dir() -> None:
 
             existing = col.get(where={"doc_id": doc_id}, include=[])
             if existing.get("ids"):
+                logger.info("[seed] 이미 존재 — 건너뜀: '%s' (doc_id=%s)", pdf_path.name, doc_id)
+                skipped += 1
                 continue
 
+            logger.info("[seed] PDF 파싱 중: '%s'", pdf_path.name)
             try:
                 text = pymupdf4llm.to_markdown(str(pdf_path))
+                logger.info("[seed] 파싱 완료: '%s' text_len=%d", pdf_path.name, len(text))
             except Exception as e:
-                logger.warning("[seed] PDF 파싱 실패 %s: %s", pdf_path.name, e)
+                logger.warning("[seed] PDF 파싱 실패 '%s': %s", pdf_path.name, e)
                 text = f"Document: {pdf_path.name}"
+                failed += 1
 
             chunk_count = _ingest_doc_to_chroma(doc_id, title, text, source_file=pdf_path.name)
             _upsert_internal_doc_db(db, doc_id, title, text, pdf_path.name, chunk_count)
-            logger.info("[seed] ingested '%s' → doc_id=%s, chunks=%d",
-                        pdf_path.name, doc_id, chunk_count)
+            logger.info("[seed] 완료: '%s' → doc_id=%s, chunks=%d", pdf_path.name, doc_id, chunk_count)
+            seeded += 1
     finally:
         db.close()
+    logger.info("[seed] 시딩 종료: 신규=%d, 스킵=%d, 실패=%d", seeded, skipped, failed)
 
 
 @app.on_event("startup")
@@ -221,9 +238,21 @@ def delete_internal_doc(doc_id: str, db: Session = Depends(get_db)) -> dict:
     return {"deleted": doc_id}
 
 
-# ── 사내문서 텍스트 조회 (ChromaDB) ──────────────────────────
+# ── 사내문서 텍스트 조회 (MariaDB original_text 우선, 없으면 ChromaDB 청크 조합) ────
 @app.get("/internal-docs/{doc_id}")
-def get_internal_doc_text(doc_id: str) -> dict:
+def get_internal_doc_text(doc_id: str, db: Session = Depends(get_db)) -> dict:
+    # MariaDB에 저장된 원본 텍스트를 먼저 사용 (placeholder 없는 원본)
+    db_doc = db.query(InternalDocument).filter_by(doc_id=doc_id).first()
+    if db_doc and db_doc.original_text:
+        logger.info("[get_doc] MariaDB 원본 반환: doc_id=%s title='%s'", doc_id, db_doc.title)
+        clean_text = "\n".join(
+            line for line in db_doc.original_text.splitlines()
+            if "intentionally omitted" not in line
+        )
+        return {"doc_id": doc_id, "title": db_doc.title, "text": clean_text}
+
+    # fallback: ChromaDB 청크 조합
+    logger.warning("[get_doc] MariaDB 원본 없음 — ChromaDB 청크 조합으로 fallback: doc_id=%s", doc_id)
     try:
         doc = _get_internal_doc_from_chroma(doc_id)
         full_text = "\n\n".join(chunk.document for chunk in doc.internal_chunks)
@@ -232,29 +261,34 @@ def get_internal_doc_text(doc_id: str) -> dict:
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-# ── PDF 파일 서빙 ─────────────────────────────────────────────
-@app.get("/assets/internal-docs/{file_name}")
-def get_internal_doc_file(file_name: str):
-    safe_name = Path(file_name).name
-    file_path = INTERNAL_DOCS_DIR / safe_name
-    if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(status_code=404, detail=f"Internal PDF not found: {safe_name}")
+def _pdf_response(file_path: Path) -> FileResponse:
+    """비 ASCII 파일명을 RFC 5987 방식으로 인코딩해 FileResponse 반환."""
+    encoded = quote(file_path.name, safe="")
     return FileResponse(
         path=str(file_path),
         media_type="application/pdf",
-        headers={"Content-Disposition": f'inline; filename="{safe_name}"'},
+        headers={"Content-Disposition": f"inline; filename*=UTF-8''{encoded}"},
     )
 
 
+# ── PDF 파일 서빙 ─────────────────────────────────────────────
 @app.get("/assets/internal-docs/by-doc/{doc_id}")
 def get_internal_doc_by_id(doc_id: str, db: Session = Depends(get_db)):
     doc = db.query(InternalDocument).filter_by(doc_id=doc_id).first()
     if doc and doc.source_file:
         file_path = INTERNAL_DOCS_DIR / Path(doc.source_file).name
         if file_path.exists():
-            return FileResponse(str(file_path), media_type="application/pdf",
-                                headers={"Content-Disposition": f'inline; filename="{file_path.name}"'})
+            return _pdf_response(file_path)
     raise HTTPException(status_code=404, detail=f"PDF not found for doc_id: {doc_id}")
+
+
+@app.get("/assets/internal-docs/{file_name:path}")
+def get_internal_doc_file(file_name: str):
+    safe_name = Path(file_name).name
+    file_path = INTERNAL_DOCS_DIR / safe_name
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Internal PDF not found: {safe_name}")
+    return _pdf_response(file_path)
 
 
 # ── 레거시 ingest 엔드포인트 ──────────────────────────────────

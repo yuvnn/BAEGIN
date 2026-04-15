@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -9,6 +10,8 @@ from uuid import uuid4
 
 from ..repositories.internal_doc_repository import get_internal_doc
 from ..repositories.paper_repository import get_paper_summary
+
+logger = logging.getLogger(__name__)
 from ..schemas.input import GenerateReportRequest
 from ..schemas.citation import Citation
 from ..schemas.report import FinalResponse
@@ -58,6 +61,12 @@ SECTION_SPECS: list[dict[str, str]] = [
         "content_type": "text/plain",
     },
 ]
+
+
+def _strip_image_placeholders(text: str) -> str:
+    """pymupdf4llm 이미지 placeholder 라인 제거."""
+    lines = [line for line in text.splitlines() if "intentionally omitted" not in line]
+    return "\n".join(lines)
 
 
 def _build_five_line_summary(summary_md: str, max_lines: int = 5) -> list[str]:
@@ -134,13 +143,26 @@ class ReportStreamService:
             job.condition.notify_all()
 
     def _run_generation(self, job: ReportGenerationJob) -> None:
+        logger.info("[report:%s] 생성 시작 — paper_id=%s internal_doc_id=%s",
+                    job.report_id, job.paper_id, job.internal_doc_id)
         try:
+            logger.info("[report:%s] 1/4 논문 요약 로드 중...", job.report_id)
             paper_summary = get_paper_summary(job.paper_id)
+            logger.info("[report:%s] 1/4 논문 로드 완료 — title='%s'", job.report_id, paper_summary.title)
+
+            logger.info("[report:%s] 2/4 사내문서 청크 로드 중...", job.report_id)
             internal_doc = get_internal_doc(job.internal_doc_id)
+            logger.info("[report:%s] 2/4 사내문서 로드 완료 — title='%s' chunks=%d",
+                        job.report_id, internal_doc.internal_doc_title, len(internal_doc.internal_chunks))
+
+            logger.info("[report:%s] 3/4 분석 에이전트 실행 중...", job.report_id)
             analysis_result = self.pipeline_service.run_analysis_agent(
                 paper_summary=paper_summary,
                 internal_doc=internal_doc,
             )
+            logger.info("[report:%s] 3/4 분석 완료 — requirements=%d technologies=%d mappings=%d",
+                        job.report_id, len(analysis_result.internal_requirements),
+                        len(analysis_result.paper_technologies), len(analysis_result.mapping_table))
 
             internal_lines = [item.requirement_text for item in analysis_result.internal_requirements[:3]]
             paper_lines = _build_five_line_summary(paper_summary.summary_md, max_lines=5)
@@ -184,7 +206,9 @@ class ReportStreamService:
                     },
                 )
 
+            logger.info("[report:%s] 4/4 보고서 에이전트 실행 중...", job.report_id)
             final_response = self.pipeline_service.run_report_agent(analysis_result=analysis_result)
+            logger.info("[report:%s] 4/4 보고서 생성 완료 — citations=%d", job.report_id, len(final_response.citations))
             final_response.report.sections.paper_tech_summary_3lines = (
                 "\n".join(paper_lines) if paper_lines else "논문 기술 데이터 없음"
             )
@@ -227,6 +251,9 @@ class ReportStreamService:
                     paper_anchor_idx += 1
 
                 if citation.source_type == "internal" and first_internal_chunk is not None:
+                    # placeholder 제거
+                    if citation.source_text:
+                        citation.source_text = _strip_image_placeholders(citation.source_text)
                     if not citation.metadata:
                         citation.metadata = {}
                     citation.metadata.setdefault("doc_id", first_internal_chunk.metadata.doc_id)
@@ -276,10 +303,12 @@ class ReportStreamService:
                     "updated_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
+            logger.info("[report:%s] 저장 및 스트리밍 완료", job.report_id)
             with job.condition:
                 job.completed = True
                 job.condition.notify_all()
         except Exception as exc:
+            logger.error("[report:%s] 생성 실패: %s", job.report_id, exc, exc_info=True)
             self._append_event(
                 job,
                 "failed",

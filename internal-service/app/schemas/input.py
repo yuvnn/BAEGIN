@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field
 class PaperSummary(BaseModel):
     paper_id: str = Field(..., min_length=1)
     title: str = Field(..., min_length=1)
-    summary_md: str = Field(..., min_length=1)
-    paper_url: str = Field(..., min_length=1)
+    summary_md: str = Field(default="")
+    paper_url: str = Field(default="")
     authors: list[str] = Field(default_factory=list)
     category: str = Field(default="unknown")
 

@@ -4,7 +4,7 @@
     <div class="p1-body">
       <div class="p1-left" ref="leftPanelRef">
         <canvas ref="vizCanvasRef" id="vizCanvas" :class="{ drag: isDragging }"></canvas>
-        <div class="viz-info">드래그로 회전 · 스크롤로 확대/축소 · 클릭으로 논문 선택</div>
+        <div class="viz-info">드래그로 회전 · 스크롤로 확대/축소</div>
         <!-- Automated Reviewer Panel -->
         <div class="reviewer-panel" @click="store.go('p6')">
           <div class="rp-title-row">

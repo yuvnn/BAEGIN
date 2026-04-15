@@ -15,7 +15,7 @@ _MOCK_PAPERS: dict[str, PaperSummary] = {
         paper_id="paper-demo-001",
         title="Demo Paper",
         summary_md="Demo summary for testing.",
-        paper_url="https://example.org/demo",
+        paper_url="https://arxiv.org/pdf/2504.08626",
         authors=["Demo Author"],
         category="ML Foundation",
     ),
@@ -33,10 +33,15 @@ def get_paper_summary(paper_id: str) -> PaperSummary:
         return PaperSummary(
             paper_id=data["paper_id"],
             title=data.get("title") or data.get("paper_id", paper_id),
-            summary_md=data.get("md_summary") or data.get("abstract") or "",
-            paper_url=data.get("paper_url") or "",
+            summary_md=(
+                data.get("md_summary")
+                or (data.get("summary_data") or {}).get("summary")
+                or data.get("abstract")
+                or ""
+            ),
+            paper_url=data.get("paper_url") or data.get("url") or "",
             authors=data.get("authors") or [],
-            category=data.get("category") or "Unknown",
+            category=(data.get("category") or data.get("metadata", {}).get("category") or "Unknown"),
         )
     except Exception as exc:
         logger.warning("[paper_repository] failed to fetch paper_id=%s: %s", paper_id, exc)

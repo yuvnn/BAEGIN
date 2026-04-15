@@ -414,7 +414,7 @@ async function openRealModal(paper, idx) {
   modal.mbarStyle = airaTbarStyle(paper.aira_score)
   modal.summ = '<div style="color:var(--t3);font-size:12px">불러오는 중...</div>'
   modal.pdfUrl = ''
-  modal.onOpenPaper = null
+  modal.onOpenPaper = () => { closeModal(); goToCategory(paper.metadata?.category || '전체') }
   store.p1ModalOpen = true
 
   try {
@@ -429,7 +429,7 @@ async function openRealModal(paper, idx) {
     modal.mbarStyle = airaTbarStyle(detail.aira_score)
     modal.summ = fmtMd(detail.md_summary || '요약 없음')
     modal.pdfUrl = detail.paper_url || ''
-    modal.onOpenPaper = detail.paper_url ? () => { window.open(detail.paper_url, '_blank') } : null
+    modal.onOpenPaper = () => { closeModal(); goToCategory(detail.category || paper.metadata?.category || '전체') }
   } catch (e) {
     modal.summ = '<div style="color:var(--t3)">상세 정보를 불러올 수 없습니다.</div>'
   }

@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+import threading
 
 # Configure logging to output to stdout
 logging.basicConfig(
@@ -21,7 +22,7 @@ from sqlalchemy import func, text
 import py_eureka_client.eureka_client as eureka_client
 
 from .consumer import start_kafka_consumer, _ARXIV_TO_CATEGORY
-from .chroma_client import ensure_collection, get_recent_papers
+from .chroma_client import ensure_collection, get_recent_papers, query_internal_docs
 from .database import engine, Base, get_db
 from .models import Paper, PaperSummary, PaperRelate
 
@@ -191,6 +192,7 @@ def get_paper(paper_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
 
     return {
         "paper_id": summary.paper_id,
+        "title": paper.title if paper else None,
         "category": summary.category,
         "paper_url": summary.paper_url,
         "authors": authors,
@@ -199,6 +201,69 @@ def get_paper(paper_id: str, db: Session = Depends(get_db)) -> Dict[str, Any]:
         "aira_score": summary.aira_score,
         "aira_decision": summary.aira_decision,
     }
+
+
+def _compute_relates_for_paper(paper_id: str, md_summary: str, db: Session) -> int:
+    """단일 논문에 대해 internal_docs ChromaDB 쿼리 후 PaperRelate 저장. 저장 수 반환."""
+    internal_results = query_internal_docs(md_summary, n_results=50)
+    if not internal_results or not internal_results.get("ids"):
+        return 0
+
+    ids_list = internal_results["ids"][0]
+    docs_list = internal_results["documents"][0]
+    metas_list = internal_results["metadatas"][0]
+
+    paper_relates: dict[str, dict] = {}
+    current_rank = 1
+    for i in range(len(ids_list)):
+        if current_rank > 10:
+            break
+        meta = metas_list[i] if metas_list else {}
+        chunk_text = docs_list[i]
+        internal_doc_id = meta.get("doc_id", "unknown_doc")
+        source_file = meta.get("source_file", "Unknown File")
+        if internal_doc_id not in paper_relates:
+            paper_relates[internal_doc_id] = {
+                "internal_doc_id": internal_doc_id,
+                "rank": current_rank,
+                "reason": f"### 매칭된 내부 문서: {source_file}\n\n- **유사 청크 1**: {chunk_text}\n",
+            }
+            current_rank += 1
+        else:
+            paper_relates[internal_doc_id]["reason"] += f"\n- **추가 유사 청크**: {chunk_text}\n"
+
+    for relate_data in paper_relates.values():
+        db.merge(PaperRelate(
+            paper_id=paper_id,
+            internal_doc_id=relate_data["internal_doc_id"],
+            rank=relate_data["rank"],
+            reason=relate_data["reason"],
+        ))
+    if paper_relates:
+        db.commit()
+    return len(paper_relates)
+
+
+@app.post("/papers/relate/refresh")
+def refresh_paper_relates() -> dict:
+    """모든 PaperSummary에 대해 internal_docs similarity를 재계산해 PaperRelate를 갱신."""
+    def _run():
+        _db = next(get_db())
+        try:
+            summaries = _db.query(PaperSummary).all()
+            total = 0
+            for s in summaries:
+                try:
+                    count = _compute_relates_for_paper(s.paper_id, s.md_summary or "", _db)
+                    total += count
+                except Exception as exc:
+                    logger.warning("[relate/refresh] error for %s: %s", s.paper_id, exc)
+            logger.info("[relate/refresh] done. total relates=%d", total)
+        finally:
+            _db.close()
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"status": "started", "message": "PaperRelate 재계산이 백그라운드에서 시작됐습니다."}
 
 
 @app.get("/papers/{paper_id}/relates")

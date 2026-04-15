@@ -1,5 +1,6 @@
 import axios from "axios";
 import { store } from "../store.js"; // 인증 토큰을 가져오기 위해 필요
+import { paperServiceClient } from "./client.js";
 
 // 1. 환경 변수에서 베이스 URL을 가져오거나 기본값 사용
 const BASE_URL = (import.meta.env.VITE_INTERNAL_API || "/internal-api").replace(/\/$/, "");
@@ -46,4 +47,37 @@ export async function getReportById(reportId) {
 export async function getInternalDocText(docId) {
   const response = await internalClient.get(`/internal-docs/${encodeURIComponent(docId)}`);
   return response.data;
+}
+
+// 사내문서 관리 API
+export async function listInternalDocs() {
+  const response = await internalClient.get('/internal-docs/')
+  return response.data
+}
+
+export async function registerInternalDoc({ title, text, doc_id }) {
+  const response = await internalClient.post('/internal-docs/register', { title, text, doc_id })
+  return response.data
+}
+
+export async function uploadInternalDocFile(title, file, doc_id) {
+  const form = new FormData()
+  form.append('title', title)
+  form.append('file', file)
+  if (doc_id) form.append('doc_id', doc_id)
+  const response = await internalClient.post('/internal-docs/upload', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 60000,
+  })
+  return response.data
+}
+
+export async function deleteInternalDoc(docId) {
+  const response = await internalClient.delete(`/internal-docs/${encodeURIComponent(docId)}`)
+  return response.data
+}
+
+export async function refreshPaperRelates() {
+  const response = await paperServiceClient.post('/api/papers/relate/refresh')
+  return response.data
 }

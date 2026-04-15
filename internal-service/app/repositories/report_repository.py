@@ -96,6 +96,19 @@ def get_latest_report() -> FinalResponse | None:
         db.close()
 
 
+def _extract_category(report_json: str | None) -> str | None:
+    if not report_json:
+        return None
+    try:
+        data = json.loads(report_json)
+        for cit in data.get("citations", []):
+            if cit.get("source_type") == "paper":
+                return cit.get("metadata", {}).get("category")
+    except Exception:
+        pass
+    return None
+
+
 def list_reports(limit: int = 50) -> list[dict]:
     db = SessionLocal()
     try:
@@ -114,6 +127,7 @@ def list_reports(limit: int = 50) -> list[dict]:
                 "status": r.status,
                 "created_at": r.created_at.isoformat() if r.created_at else None,
                 "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+                "category": _extract_category(r.report_json),
             }
             for r in rows
         ]

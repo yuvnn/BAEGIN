@@ -1,12 +1,8 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-
 fastapi==0.115.9
 uvicorn==0.34.0
 chromadb==1.0.4
 python-multipart==0.0.20
 pymupdf4llm
-torch==2.6.0
-sentence-transformers==3.4.1
 langchain-core==0.3.59
 langchain-openai==0.2.14
 openai==1.76.2

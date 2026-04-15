@@ -1,9 +1,6 @@
 import logging
 from typing import Any
 
-from sentence_transformers import SentenceTransformer
-
-MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 logger = logging.getLogger(__name__)
 
 
@@ -36,11 +33,6 @@ def chunk_text(text: str, chunk_size: int = 700) -> list[str]:
         logger.info("[chunk_text] 이미지 placeholder %d개 제거됨", filtered_count)
 
     return chunks
-
-
-def embed_chunks(chunks: list[str]) -> list[list[float]]:
-    vectors = MODEL.encode(chunks, normalize_embeddings=True)
-    return vectors.tolist()
 
 
 def build_metadata(doc_id: str, source_type: str, title: str) -> dict[str, Any]:

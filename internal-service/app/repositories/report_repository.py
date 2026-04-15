@@ -8,7 +8,7 @@ from ..database import SessionLocal
 from ..models import ReportRecord
 from ..schemas.report import FinalResponse
 from ..chroma_client import get_chroma_client
-from ..ingestion import chunk_text, embed_chunks
+from ..ingestion import chunk_text
 
 COLLECTION_REPORTS = os.getenv("CHROMA_COLLECTION_REPORTS", "reports")
 
@@ -55,8 +55,7 @@ def _store_in_chroma(response: FinalResponse) -> None:
             })
 
     if all_chunks:
-        embeddings = embed_chunks(all_chunks)
-        col.upsert(ids=all_ids, documents=all_chunks, embeddings=embeddings, metadatas=all_metas)
+        col.upsert(ids=all_ids, documents=all_chunks, metadatas=all_metas)
 
 
 def save_report(response: FinalResponse) -> None:

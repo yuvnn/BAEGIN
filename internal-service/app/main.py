@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from .api.report_routes import router as report_router
 from .chroma_client import ensure_collections, get_chroma_client
 from .database import SessionLocal, engine, Base
-from .ingestion import build_metadata, chunk_text, embed_chunks
+from .ingestion import build_metadata, chunk_text
 from .models import InternalDocument
 from .repositories.internal_doc_repository import get_internal_doc as _get_internal_doc_from_chroma
 
@@ -77,7 +77,6 @@ def _ingest_doc_to_chroma(doc_id: str, title: str, text: str, source_file: str =
         return 0
     logger.info("[ingest] 청킹 완료: %d개 청크 생성", len(chunks))
 
-    embeddings = embed_chunks(chunks)
     meta = build_metadata(doc_id, "internal", title)
     if source_file:
         meta["source_file"] = source_file
@@ -91,8 +90,7 @@ def _ingest_doc_to_chroma(doc_id: str, title: str, text: str, source_file: str =
         logger.debug("[ingest] 기존 벡터 삭제 완료: doc_id=%s", doc_id)
     except Exception:
         pass
-    col.add(ids=ids, documents=chunks, embeddings=embeddings,
-            metadatas=[meta for _ in chunks])
+    col.add(ids=ids, documents=chunks, metadatas=[meta for _ in chunks])
     logger.info("[ingest] ChromaDB 저장 완료: doc_id=%s chunks=%d", doc_id, len(chunks))
     return len(chunks)
 
@@ -301,28 +299,24 @@ class IngestRequest(BaseModel):
 @app.post("/ingest/internal")
 def ingest_internal(payload: IngestRequest) -> dict:
     chunks = chunk_text(payload.text)
-    embeddings = embed_chunks(chunks)
     metadata = build_metadata(payload.doc_id, "internal", payload.title)
 
     client = get_chroma_client()
     collection = client.get_or_create_collection(os.getenv("CHROMA_COLLECTION_INTERNAL", "internal_docs"))
 
     ids = [f"{payload.doc_id}-{idx}" for idx in range(len(chunks))]
-    collection.add(ids=ids, documents=chunks, embeddings=embeddings,
-                   metadatas=[metadata for _ in chunks])
+    collection.add(ids=ids, documents=chunks, metadatas=[metadata for _ in chunks])
     return {"ingested": len(chunks), "collection": "internal_docs"}
 
 
 @app.post("/ingest/paper")
 def ingest_paper(payload: IngestRequest) -> dict:
     chunks = chunk_text(payload.text)
-    embeddings = embed_chunks(chunks)
     metadata = build_metadata(payload.doc_id, "paper", payload.title)
 
     client = get_chroma_client()
     collection = client.get_or_create_collection(os.getenv("CHROMA_COLLECTION_PAPERS", "papers"))
 
     ids = [f"{payload.doc_id}-{idx}" for idx in range(len(chunks))]
-    collection.add(ids=ids, documents=chunks, embeddings=embeddings,
-                   metadatas=[metadata for _ in chunks])
+    collection.add(ids=ids, documents=chunks, metadatas=[metadata for _ in chunks])
     return {"ingested": len(chunks), "collection": "papers"}

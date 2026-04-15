@@ -9,6 +9,8 @@
       <button class="nav-btn" :class="{ on: store.currentPage === 'p5' || store.currentPage === 'p4' }" @click="store.go('p5')">비교보고서</button>
       <span class="nav-sep">|</span>
       <button class="nav-btn" :class="{ on: store.currentPage === 'p6' }" @click="store.go('p6')">AI 리뷰어</button>
+      <span class="nav-sep">|</span>
+      <button class="nav-btn" :class="{ on: store.currentPage === 'p7' }" @click="store.go('p7')">사내문서</button>
     </div>
     <div class="search-box">
       <input

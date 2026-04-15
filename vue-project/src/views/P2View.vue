@@ -35,7 +35,7 @@
       <div class="empty-state" v-else-if="!filteredPapers.length">조건에 맞는 논문이 없습니다.</div>
       
       <div
-        v-for="p in filteredPapers"
+        v-for="p in pagedPapers"
         :key="p.id"
         class="pcard"
         @click="store.openPaper(p)"
@@ -53,11 +53,18 @@
         </div>
       </div>
     </div>
+    <div class="pg-bar" v-if="totalPages > 1">
+      <button class="pg-btn" :disabled="currentPage === 1" @click="currentPage--">‹</button>
+      <button v-for="n in pageNumbers" :key="n"
+        class="pg-btn" :class="{ on: n === currentPage }"
+        @click="currentPage = n">{{ n }}</button>
+      <button class="pg-btn" :disabled="currentPage === totalPages" @click="currentPage++">›</button>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { store } from '../store.js'
 import { fetchPapers } from '../api/paperService.js'
 import { CL } from '../data/vizData.js'
@@ -89,6 +96,9 @@ const dateFrom = ref('')
 const dateTo = ref('')
 const papers = ref([])
 const loading = ref(false)
+
+const PAGE_SIZE = 10
+const currentPage = ref(1)
 
 /** 3. 데이터 변환 및 로드 로직 */
 function transformPaper(p) {
@@ -160,4 +170,36 @@ const filteredPapers = computed(() => {
   
   return list
 })
+
+const totalPages = computed(() => Math.ceil(filteredPapers.value.length / PAGE_SIZE))
+const pagedPapers = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredPapers.value.slice(start, start + PAGE_SIZE)
+})
+const pageNumbers = computed(() => {
+  const total = totalPages.value
+  const cur = currentPage.value
+  const s = Math.max(1, cur - 2)
+  const e = Math.min(total, s + 4)
+  return Array.from({ length: e - s + 1 }, (_, i) => s + i)
+})
+
+watch([() => store.curCat, dateFrom, dateTo, () => store.curSort, () => store.searchQuery], () => {
+  currentPage.value = 1
+})
 </script>
+
+<style scoped>
+.pg-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px; padding: 16px 0 8px;
+}
+.pg-btn {
+  min-width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--t2); cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pg-btn.on { background: var(--teal); color: #fff; border-color: var(--teal); }
+.pg-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+</style>

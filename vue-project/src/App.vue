@@ -8,6 +8,7 @@
     <P4View v-show="store.currentPage === 'p4'" />
     <P5View v-show="store.currentPage === 'p5'" />
     <P6View v-show="store.currentPage === 'p6'" />
+    <P7View v-show="store.currentPage === 'p7'" />
     <ChatBot />
   </template>
   <template v-else>
@@ -27,6 +28,7 @@ import P3View from './views/P3View.vue'
 import P4View from './views/P4View.vue'
 import P5View from './views/P5View.vue'
 import P6View from './views/P6View.vue'
+import P7View from './views/P7View.vue'
 import LoginView from './views/LoginView.vue'
 import SignupView from './views/SignupView.vue'
 import SplashView from './views/SplashView.vue'

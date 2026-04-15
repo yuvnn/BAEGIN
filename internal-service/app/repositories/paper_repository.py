@@ -39,7 +39,13 @@ def get_paper_summary(paper_id: str) -> PaperSummary:
                 or data.get("abstract")
                 or ""
             ),
-            paper_url=data.get("paper_url") or data.get("url") or "",
+            paper_url=(
+                data.get("paper_url")
+                or data.get("url")
+                or data.get("metadata", {}).get("pdf_url")
+                or data.get("metadata", {}).get("url")
+                or ""
+            ),
             authors=data.get("authors") or [],
             category=(data.get("category") or data.get("metadata", {}).get("category") or "Unknown"),
         )

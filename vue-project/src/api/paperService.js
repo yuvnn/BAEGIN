@@ -15,9 +15,15 @@ export async function comparePaperWithInternal(paperId, queryText) {
   return response.data;
 }
 
-// 3. 논문 목록 조회 (이미 잘 되어 있음)
+// 3. 논문 목록 조회 (키워드 필터링 적용 - P1View 최신 논문용)
 export async function fetchPapers(limit = 20) {
   const response = await paperServiceClient.get("/api/papers", { params: { limit } });
+  return response.data;
+}
+
+// 3-1. 전체 논문 목록 조회 (필터링 없음 - P2View 논문 리스트용)
+export async function fetchAllPapers(limit = 100) {
+  const response = await paperServiceClient.get("/api/papers", { params: { limit, no_filter: true } });
   return response.data;
 }
 

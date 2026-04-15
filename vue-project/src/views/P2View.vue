@@ -66,7 +66,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { store } from '../store.js'
-import { fetchPapers } from '../api/paperService.js'
+import { fetchAllPapers } from '../api/paperService.js'
 import { CL } from '../data/vizData.js'
 
 /** 1. 상수 및 스타일 설정 */
@@ -131,7 +131,7 @@ function transformPaper(p) {
 onMounted(async () => {
   loading.value = true
   try {
-    const raw = await fetchPapers(100)
+    const raw = await fetchAllPapers(100)
     papers.value = raw.map(transformPaper)
   } catch (err) {
     console.error("논문 리스트 로드 실패:", err)

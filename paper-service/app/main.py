@@ -109,33 +109,41 @@ def list_rules() -> list[dict]:
 @app.get("/papers")
 def list_papers(
     limit: int = 50,
+    no_filter: bool = False,
     x_user_keywords: Optional[str] = Header(None),
     db: Session = Depends(get_db),
 ) -> List[Dict[str, Any]]:
     """
     Returns recently evaluated and summarized papers ordered by published_at DESC.
-    Filters by user keywords (comma-separated arXiv category tags) if provided.
+    Filters by user keywords (comma-separated arXiv category tags) if provided,
+    unless no_filter=true is passed.
     """
-    # Build allowed category set from X-User-Keywords header
-    allowed_categories: Optional[set] = None
-    if x_user_keywords and x_user_keywords.strip():
-        tags = [t.strip() for t in x_user_keywords.split(",") if t.strip()]
-        allowed_categories = set()
-        for tag in tags:
-            if tag in _ARXIV_TO_CATEGORY:
-                allowed_categories.add(_ARXIV_TO_CATEGORY[tag])
-            else:
-                allowed_categories.add(tag)
-
     query = (
         db.query(Paper, PaperSummary)
         .join(PaperSummary, Paper.paper_id == PaperSummary.paper_id)
         .order_by(Paper.published_at.is_(None), Paper.published_at.desc())
     )
-    if allowed_categories:
-        query = query.filter(Paper.category.in_(allowed_categories))
 
-    rows = query.limit(limit).all()
+    if no_filter:
+        rows = query.limit(limit).all()
+    else:
+        # Build allowed category set from X-User-Keywords header
+        allowed_categories: Optional[set] = None
+        if x_user_keywords and x_user_keywords.strip():
+            tags = [t.strip() for t in x_user_keywords.split(",") if t.strip()]
+            allowed_categories = set()
+            for tag in tags:
+                if tag in _ARXIV_TO_CATEGORY:
+                    allowed_categories.add(_ARXIV_TO_CATEGORY[tag])
+                else:
+                    allowed_categories.add(tag)
+
+        if allowed_categories:
+            rows = query.filter(Paper.category.in_(allowed_categories)).limit(limit).all()
+            if not rows:
+                rows = query.limit(limit).all()
+        else:
+            rows = query.limit(limit).all()
 
     response = []
     for paper, summary in rows:

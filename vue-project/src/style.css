@@ -85,11 +85,11 @@ body{font-family:'Segoe UI','Noto Sans KR',sans-serif;background:var(--bg);color
 /* P1 modal */
 .modal-bg{position:absolute;inset:0;background:rgba(0,2,10,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);z-index:50;display:none;align-items:flex-start;justify-content:center;padding-top:24px;overflow-y:auto;}
 .modal-bg.show{display:flex;}
-.modal{background:rgba(4,10,32,0.78);backdrop-filter:blur(48px) saturate(180%);-webkit-backdrop-filter:blur(48px) saturate(180%);border:none;border-radius:36px;width:750px;max-width:94%;padding:42px;position:relative;animation:mIn .22s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 24px 60px rgba(0,0,20,0.55),inset 0 1px 0 rgba(255,255,255,0.07);margin-bottom:24px;display:flex;flex-direction:column;max-height:85vh;overflow:hidden;}
+.modal{background:rgba(4,10,32,0.78);backdrop-filter:blur(48px) saturate(180%);-webkit-backdrop-filter:blur(48px) saturate(180%);border:none;border-radius:36px;width:750px;max-width:94%;padding:42px;position:relative;animation:mIn .22s cubic-bezier(0.34,1.56,0.64,1);box-shadow:0 24px 60px rgba(0,0,20,0.55),inset 0 1px 0 rgba(255,255,255,0.07);margin-bottom:24px;}
 @keyframes mIn{from{opacity:0;transform:translateY(16px) scale(0.95);}to{opacity:1;transform:none;}}
-.modal-summ-section{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:0;}
+.modal-summ-section{margin-bottom:0;}
 .modal-summ-label{font-size:18px;color:rgba(110,140,210,0.5);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;flex-shrink:0;}
-.modal-summ-body{flex:1;font-size:20px;color:rgba(170,190,240,0.8);line-height:1.85;background:rgba(37,99,235,0.07);border-radius:18px;padding:18px 21px;overflow-y:auto;max-height:none;}
+.modal-summ-body{font-size:20px;color:rgba(170,190,240,0.8);line-height:1.85;background:rgba(37,99,235,0.07);border-radius:18px;padding:18px 21px;}
 .modal-x{position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.07);border:none;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(160,180,240,0.7);font-size:26px;line-height:1;transition:background .2s;}
 .modal-x:hover{background:rgba(255,255,255,0.13);}
 .modal-tag{display:inline-flex;align-items:center;align-self:flex-start;font-size:18px;padding:7px 18px;border-radius:20px;margin-bottom:18px;background:rgba(37,99,235,0.18);color:rgba(180,200,255,0.8);border:none;}
